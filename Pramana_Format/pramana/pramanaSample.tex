@@ -1,0 +1,187 @@
+\documentclass{pramana}
+
+%%
+%%download pramana.cls and save it in the folder of  your source file
+%%
+
+%%suggested packages to be included
+\usepackage{graphicx,amsmath,bm}
+
+%%The following packages are included with the class file.
+%%Please download if these packages are not included
+%%in your local TeX distribution 
+%%txfonts,balance,textcase,float
+%%
+
+\begin{document}
+
+%%paper title
+%%For line breaks \\ can be used within title 
+\title{Title of the paper goes here\\ second line}
+
+
+%%author names are separated by comma (,) 
+%%use \and before the last author name 
+%%\textsuperscript{number} is used for affiliation
+%%use a * along with the number separated by comma
+%% for the  author for correspondence
+
+\author{Author1\textsuperscript{1}, Author2\textsuperscript{1}\and Author3\textsuperscript{2,*}}
+\affilOne{\textsuperscript{1} Department of P, University X\\}
+\affilTwo{\textsuperscript{2} Department of Q, University Z}
+
+%%escape two column mode for title, affiliation and abstract
+%%by giving \twocolumn command as shown
+
+\twocolumn[{
+
+\maketitle
+
+%%include \corres to print the corresponding author Email id
+\corres{abc@xyz.com}
+
+%%include \msinfo for
+%%manuscript information such as
+%%received, revised and accepted dates
+%%
+\msinfo{1 January 2015}{1 January 2015}{1 January 2015}
+
+%%abstract
+\begin{abstract}
+Abstract text goes here.  Abstract text goes here. 
+Abstract text goes here.  Abstract text goes here. 
+ Abstract text goes here. 
+Abstract text goes here.  Abstract text goes here. 
+ Abstract text goes here. 
+ Abstract text goes here. 
+\end{abstract}
+
+%%insert keywords separated by comma using \keywords{words}
+\keywords{keyword1, keyword2, keyword3 etc.}
+
+
+%%include \pacs{number} to print the PACS number
+\pacs{12.60.Jv; 12.10.Dm; 98.80.Cq; 11.30.Hv}
+
+}]
+%%close the twocolumn escape here
+
+%%include \doinum{number}for the DOI number in the header
+%%include \volnum{number} for the volume number in the header
+%%include \year{yyyy} for  year of publication in the header
+%%include \pgrange{num--num} page range of article in the header
+%%include \artcitid{num} for the article citation id
+%%include \lp to print last page of the article
+%%include \setcounter{page}{pagenum} for the exact starting page of the article
+
+\doinum{12.3456/s78910-011-012-3}
+\artcitid{\#\#\#\#}
+\volnum{123}
+\year{2016}
+\pgrange{23--25}
+\setcounter{page}{23}
+\lp{25}
+
+
+
+\section{Introduction}
+Section text here.  
+\subsection{Subsection heading}
+Subsection text here. 
+
+
+\section{A new Section}
+Some more  text here.  
+
+An equation
+\begin{equation}
+E=mc^2
+\end{equation}
+
+%%Use table environment for a table in one column
+
+\begin{table}[htb]
+\caption{Table fitting in a single column}\label{tableExample}
+\begin{tabular}{|l|cccc|r|}
+\hline
+one& two &three&four&five&six\\
+1&2&3&4&5&6\\
+aaa&bbbb& ccccc&dddd&eeeee&ffffff\\
+\hline
+\end{tabular}
+%%use \tablenotes{footnote} to get the table foot note
+\tablenotes{Sample table footnote}
+\end{table}
+
+
+%%Use table* environment to get the table spanning both the columns
+
+%\begin{table*}[htb]
+%\caption{Caption text here}\label{secondTable}
+%\begin{tabular}{|l|cccccccc|r|}
+%\hline
+%\textbf{head1}&\multicolumn{8}{|c|}{\textbf{head2}}&\textbf{head3}\\
+%\hline
+%one& two &three&four&five&six&seven&eight&nine&ten\\
+%1&2&3&4&5&6&7&8&9&10\\
+%aaa&bbbb&cccc&ddddd&eee&ffff&ggggg&hhhhhhhh&iiii&jjjjjj\\
+%\hline
+%\end{tabular}
+%\tablenotes{table footnote here}
+%*table spanning both the columns
+%\end{table*}
+
+
+%%An example of a figure
+
+%\begin{figure}[!t]
+%\centering{
+%\includegraphics[width=.8\columnwidth]{fig1.eps}
+%}
+%\caption{caption goes here}\label{figOne}
+%\end{figure}
+
+%%An example of a double column figure
+%%Use figure* environment
+
+%\begin{figure*}
+%\centering\includegraphics[height=.15\textheight]{fig2.eps}
+%\caption{caption spanning two columns}
+%\centering\includegraphics[height=.25\textheight]{fig3.eps}
+%\caption{caption here}
+%\end{figure*}
+
+
+\section{Conclusion}
+Conclusion here.
+
+
+%%Appendix
+
+\appendix
+
+\section{An appendix section}
+Text goes here.
+\begin{equation}
+x=a+b+c
+\end{equation}
+\section{Another appendix section}
+Text goes here.
+\begin{equation}
+y^2=ax+b+c
+\end{equation}
+%%Use section* for acknowledgements
+\section*{Acknowledgement}
+Acknowledgements
+
+%%use \balance somewhere in the left column of the last page to balance the two columns in the end page
+
+%%References section
+\begin{thebibliography}{99} 
+\bibitem{latexcompanion} 
+Michel Goossens, Frank Mittelbach, and Alexander Samarin. 
+\newblock {\em The \LaTeX\ Companion}. 
+Addison-Wesley, Reading, Massachusetts, 1993.
+\end{thebibliography}
+
+\end{document}
