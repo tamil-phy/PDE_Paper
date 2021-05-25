@@ -49,8 +49,17 @@ class TSDataset(Dataset):
                 y.append(_y)
 
             return torch.Tensor(x), torch.Tensor(y).unsqueeze(1)
-        
-        data = np.stack([np.array(ts), np.array(vals)], axis=-1)
+
+        ts, vals = np.array(ts), np.array(vals)
+        if ts.ndim < 2:
+            ts = np.expand_dims(ts, axis=1)
+        if vals.ndim < 2:
+            vals = np.expand_dims(vals, axis=1)
+            
+        print('ts, vals shapes: {}, {}'.format(ts.shape, vals.shape))
+
+        data = np.concatenate([ts, vals], axis=-1)
+        print('data shape: {}'.format(data.shape))
 
         self.input_, self.output = sliding_windows(data, seq_length)
 
