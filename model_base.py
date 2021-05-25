@@ -57,16 +57,17 @@ class Trainer:
             testset,
             cuda = True,
             epochs = 1000000,
+            every_nepoch = 1000,
             batch_size = 10,
             weights_path = None
     ):
-        self.model = model
-        self.loss_function = loss_function 
-        self.optimizer     = optimizer      
-
-
-        self.trainset = trainset
-        self.testset = testset
+        self.model         = model         
+        self.loss_function = loss_function  
+        self.optimizer     = optimizer 
+        
+        
+        self.trainset      = trainset      
+        self.testset       = testset
         
         self.trainloader = DataLoader(trainset,
                                       #shuffle=True,
@@ -75,10 +76,10 @@ class Trainer:
         self.testloader = DataLoader(testset,
                                      #shuffle=True,
                                      batch_size = batch_size)
-
-        self.epochs = epochs
-
-        self.weights_path = weights_path
+        
+        self.epochs       = epochs       
+        self.every_nepoch = every_nepoch
+        self.weights_path = weights_path 
         
         self.cuda = cuda
         if self.cuda:
@@ -159,7 +160,7 @@ class Trainer:
         save_count = 0
         for epoch in tbar:
             tbar.set_description('epoch:{} - loss:{:0.4f} - saves:{}'.format(epoch, loss, save_count))
-            if epoch and epoch % 10000 == 0:
+            if epoch and epoch % self.every_nepoch == 0:
                 loss, accuracy = self.validate_epoch(epoch)
                 print('test epoch: {}, loss:{} accuracy: {}'.format(epoch, loss, accuracy))
                 self.plot_results(epoch)     
@@ -178,10 +179,8 @@ class Trainer:
     def plot_results(self, epoch):
         input_, target, output = self.eval_epoch(epoch)
         input_, target, output = [i.detach().cpu() for i in [input_, target, output]]
-        plt.scatter(input_.cpu(), target[:, 0].cpu(), label='x')
-        plt.scatter(input_.cpu(), target[:, 1].cpu(), label='y')
-        plt.scatter(input_.cpu(), output[:, 0].cpu(), label='x\'')
-        plt.scatter(input_.cpu(), output[:, 1].cpu(), label='y\'')
+        plt.scatter(input_.cpu(), target.cpu(), label='x')
+        plt.scatter(input_.cpu(), output.cpu(), label='x\'')
         plt.legend()
         plt.show()
 
@@ -200,51 +199,36 @@ class Model(nn.Module):
         x = self.fc1(x)
         x = torch.tanh(x)
         
-#         x = self.fc2(x)
-#         x = torch.tanh(x)
-        
-#         x = self.fc3(x)
-#         x = torch.tanh(x)
+        #x = self.fc2(x)
+        #x = torch.tanh(x)
+         
+        #x = self.fc3(x)
+        #x = torch.tanh(x)
         
         x = self.fc4(x)
        
         return x
 
-if __name__ == '__main__':
+class Model(nn.Module):
+    def __init__(self, input_size, output_size):
 
-    if len(sys.argv) > 1:
-        filepath = sys.argv[1]
-    else:
-        filepath = 'harmonic_ode_1d.pkl'
+        super().__init__()
+        self.fc1 = nn.Linear(input_size, 64)
+        #self.fc2 = nn.Linear(64, 64)
+        #self.fc3 = nn.Linear(64, 64)
+        self.fc4 = nn.Linear(64, output_size)
+
+    def forward(self, x):
+        x = self.fc1(x)
+        x = torch.tanh(x)
         
-    ts, vals = pickle.load(open('{}/{}'.format(CONFIG.DATA_DIR, filepath), 'rb'))
-    dataset = HODataset(ts, vals)
+        #x = self.fc2(x)
+        #x = torch.tanh(x)
+         
+        #x = self.fc3(x)
+        #x = torch.tanh(x)
+        
+        x = self.fc4(x)
+       
+        return x
 
-    random_sample  = random.choice(dataset)
-    print('random sample: ', random_sample)
-    input_, output = random_sample
-    model = Model(input_.size()[-1], output.size()[-1])
-
-
-    weights_path = '{}/{}'.format(CONFIG.WEIGHTS_DIR, filepath.replace('.pkl', 'pt'))
-    if os.path.exists(weights_path):
-        print('loading old model....')
-        model.load_state_dict(torch.load(weights_path))
-    else:
-        #model.apply(weights_init_uniform)
-        pass
-    
-    trainer = Trainer (
-        model,
-        torch.nn.L1Loss(),
-        torch.optim.Adam(model.parameters()),
-
-        dataset,        
-        dataset,
-        batch_size = 1000,
-
-        weights_path = weights_path
-    )
-
-    trainer.do_train()
-    plt.scatter(dataset.ts.cpu(), [model.forward(i.cuda()).cpu().detach() for  i in dataset.ts])

@@ -1,6 +1,9 @@
+import pickle
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.integrate import odeint
+
+import CONFIG
 
 mu = 1.0
 
@@ -12,12 +15,18 @@ def vanderpol(X, t):
     return [dxdt, dydt]
 
 X0 = [1, 2]
-t  = np.linspace(0, 40, 2500)
+t  = np.linspace(0, 20, 250000)
 
 sol = odeint(vanderpol, X0, t)
 
+filepath = __file__.replace('.py', '.pkl')
+print('dumping data to {}'.format(filepath))
+pickle.dump((t, sol),
+             open('{}/{}'.format(CONFIG.DATA_DIR, filepath), 'wb'))
+
 x = sol[:, 0]
 y = sol[:, 1]
+
 
 plt.plot(t,x, t, y)
 plt.xlabel('t')
