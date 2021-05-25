@@ -20,21 +20,6 @@ import model_base
 
 import CONFIG
 
-class HODataset(Dataset):
-    def __init__(self, ts, vals):
-        self.ts = torch.Tensor(ts).unsqueeze(1)
-        self.vals = torch.Tensor(vals).unsqueeze(1)
-        self.vals = self.vals / self.vals.abs().max()
-        
-        #pprint(list(zip(vals, self.vals.squeeze().tolist())))
-        
-    def __len__(self):
-        return len(self.ts)
-
-    def __getitem__(self, index):
-        return [self.ts[index].squeeze().unsqueeze(0),
-                self.vals[index].squeeze().unsqueeze(0)]
-    
 def plot_results(trainer, epoch):
     input_, target, output = trainer.eval_epoch(epoch)
     input_, target, output = [i.detach().cpu() for i in [input_, target, output]]
@@ -49,13 +34,12 @@ if __name__ == '__main__':
     filepath = 'data.pkl'
         
     ts, vals = pickle.load(open(filepath, 'rb'))
-    dataset = HODataset(ts, vals)
+    dataset = model_base.XYDataset(ts, vals)
 
     random_sample  = random.choice(dataset)
     print('random sample: ', random_sample)
     input_, output = random_sample
     model = model_base.Model(input_.size()[-1], output.size()[-1])
-
 
     weights_path = filepath.replace('.pkl', '.pt')
     if os.path.exists(weights_path):

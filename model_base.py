@@ -21,13 +21,10 @@ import matplotlib.pyplot as plt
 
 import CONFIG
 
-class HODataset(Dataset):
+class XYDataset(Dataset):
     def __init__(self, ts, vals):
         self.ts = torch.Tensor(ts).unsqueeze(1)
         self.vals = torch.Tensor(vals).unsqueeze(1)
-        self.vals = self.vals / self.vals.abs().max()
-        
-        #pprint(list(zip(vals, self.vals.squeeze().tolist())))
         
     def __len__(self):
         return len(self.ts)
@@ -35,8 +32,39 @@ class HODataset(Dataset):
     def __getitem__(self, index):
         return [self.ts[index].squeeze().unsqueeze(0),
                 self.vals[index].squeeze().unsqueeze(0)]
+
+
+class TSDataset(Dataset):
+    def __init__(self, ts, vals, seq_length=10):
+        
+        def sliding_windows(data, seq_length):
+            x = []
+            y = []
+            
+            for i in range(len(data)-seq_length-1):
+                _x = data[i:(i+seq_length)]
+                _y = data[i+seq_length]
+                x.append(_x)
+                y.append(_y)
+
+            return np.array(x), np.array(y)
+        
+        data = torch.cat([torch.Tensor(ts).unsqueeze(1),
+                          torch.Tensor(vals).unsqueeze(1)],
+                         dim=-1)
+
+        self.input_, self.output = sliding_windows(data, seq_length)
+        
+        
+    def __len__(self):
+        return len(self.ts)
+
+    def __getitem__(self, index):
+        return [self.inpu_[index].squeeze().unsqueeze(0),
+                self.output[index].squeeze().unsqueeze(0)]
     
- # takes in a module and applies the specified weight initialization
+    
+# takes in a module and applies the specified weight initialization
 def weights_init_uniform(m):
     classname = m.__class__.__name__
     # for every Linear layer in a model..
@@ -209,26 +237,35 @@ class Model(nn.Module):
        
         return x
 
-class Model(nn.Module):
-    def __init__(self, input_size, output_size):
 
-        super().__init__()
-        self.fc1 = nn.Linear(input_size, 64)
-        #self.fc2 = nn.Linear(64, 64)
-        #self.fc3 = nn.Linear(64, 64)
-        self.fc4 = nn.Linear(64, output_size)
+class TSModel(nn.Module):
+
+    def __init__(self, num_classes, input_size, hidden_size, num_layers):
+        super(LSTM, self).__init__()
+        
+        self.num_classes = num_classes
+        self.num_layers = num_layers
+        self.input_size = input_size
+        self.hidden_size = hidden_size
+        self.seq_length = seq_length
+        
+        self.lstm = nn.LSTM(input_size=input_size, hidden_size=hidden_size,
+                            num_layers=num_layers, batch_first=True)
+        
+        self.fc = nn.Linear(hidden_size, num_classes)
 
     def forward(self, x):
-        x = self.fc1(x)
-        x = torch.tanh(x)
+        h_0 = Variable(torch.zeros(
+            self.num_layers, x.size(0), self.hidden_size))
         
-        #x = self.fc2(x)
-        #x = torch.tanh(x)
-         
-        #x = self.fc3(x)
-        #x = torch.tanh(x)
+        c_0 = Variable(torch.zeros(
+            self.num_layers, x.size(0), self.hidden_size))
         
-        x = self.fc4(x)
-       
-        return x
-
+        # Propagate input through LSTM
+        ula, (h_out, _) = self.lstm(x, (h_0, c_0))
+        
+        h_out = h_out.view(-1, self.hidden_size)
+        
+        out = self.fc(h_out)
+        
+        return out
