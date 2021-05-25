@@ -1,0 +1,11 @@
+* DONE restructure code layout into one directory per task [2/2]
+  tasks as in (harmonic_1d, van_der_pol_2d, ...) 
+** DONE move model out of ==nn/=
+   and reuse =Trainer=, =Model= , =Dataset= classes inside task directories
+** DONE move data generation scripts into task directories 
+* DONE LSTM based timeseries modelling of the data [2/2]
+** DONE TSDataset and TSModel 
+*** DONE using sliding window to create pseudo samples
+** DONE plot_results_(XY|TS) to plot outputs
+* TODO [#A] fix data generation 
+  - looks like there is some line added to the data generated
