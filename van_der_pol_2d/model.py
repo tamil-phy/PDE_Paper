@@ -20,22 +20,7 @@ import model_base
 
 import CONFIG
 
-class HODataset(Dataset):
-    def __init__(self, ts, vals):
-        self.ts = torch.Tensor(ts).unsqueeze(1)
-        self.vals = torch.Tensor(vals).unsqueeze(1)
-        self.vals = self.vals / self.vals.abs().max()
-        
-        #pprint(list(zip(vals, self.vals.squeeze().tolist())))
-        
-    def __len__(self):
-        return len(self.ts)
-
-    def __getitem__(self, index):
-        return [self.ts[index].squeeze().unsqueeze(0),
-                self.vals[index].squeeze().unsqueeze(0)]
-    
-def plot_results(trainer, epoch):
+def plot_results_XY(trainer, epoch):
     input_, target, output = trainer.eval_epoch(epoch)
     input_, target, output = [i.detach().cpu() for i in [input_, target, output]]
     plt.scatter(input_.cpu(), target.cpu(), label='x')
@@ -44,18 +29,37 @@ def plot_results(trainer, epoch):
     plt.show()
 
 
+def plot_results_TS(trainer, epoch):
+    input_, target, output = trainer.eval_epoch(epoch)
+    print('shapes: input_, target, ouptut: {}, {}, {}'.format(input_.size(),
+                                                              target.size(),
+                                                              output.size()))
+    input_, target, output = [i.detach().cpu() for i in [input_, target, output]]
+    plt.scatter(range(target.size(0)), target[:, 1].cpu(), label='x')
+    plt.scatter(range(target.size(0)), output[:, 1].cpu(), label='x\'')
+    plt.scatter(range(target.size(0)), target[:, 2].cpu(), label='y')
+    plt.scatter(range(target.size(0)), output[:, 2].cpu(), label='y\'')
+
+    plt.legend()
+    plt.show()
+
+
+
 if __name__ == '__main__':
 
     filepath = 'data.pkl'
-        
+    seq_length = 19
     ts, vals = pickle.load(open(filepath, 'rb'))
-    dataset = HODataset(ts, vals)
+    dataset = model_base.TSDataset(ts, vals, seq_length)
 
     random_sample  = random.choice(dataset)
     print('random sample: ', random_sample)
     input_, output = random_sample
-    model = model_base.Model(input_.size()[-1], output.size()[-1])
-
+    model = model_base.TSModel(input_.size()[-1],
+                               output.size()[-1],
+                               100,
+                               1,
+                               seq_length)
 
     weights_path = filepath.replace('.pkl', '.pt')
     if os.path.exists(weights_path):
