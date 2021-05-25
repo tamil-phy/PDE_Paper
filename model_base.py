@@ -12,6 +12,7 @@ from tqdm import tqdm
 import random
 import torch
 
+import numpy as np
 from torch import nn
 
 from torch.utils.data import DataLoader, Dataset
@@ -47,21 +48,20 @@ class TSDataset(Dataset):
                 x.append(_x)
                 y.append(_y)
 
-            return np.array(x), np.array(y)
+            return torch.Tensor(x), torch.Tensor(y).unsqueeze(1)
         
-        data = torch.cat([torch.Tensor(ts).unsqueeze(1),
-                          torch.Tensor(vals).unsqueeze(1)],
-                         dim=-1)
+        data = np.stack([np.array(ts), np.array(vals)], axis=-1)
 
         self.input_, self.output = sliding_windows(data, seq_length)
-        
+
+        print('shapes: input_, output: {}, {}'.format(self.input_.size(), self.output.size()))
         
     def __len__(self):
-        return len(self.ts)
+        return len(self.input_)
 
     def __getitem__(self, index):
-        return [self.inpu_[index].squeeze().unsqueeze(0),
-                self.output[index].squeeze().unsqueeze(0)]
+        return [self.input_[index],
+                self.output[index]]
     
     
 # takes in a module and applies the specified weight initialization
@@ -114,34 +114,34 @@ class Trainer:
             self.model.cuda()
 
     def validate_step(self, batch):
-        image, label = batch
+        input_, output = batch
         if self.cuda:
-            image, label = image.cuda(), label.cuda()
+            input_, output = input_.cuda(), output.cuda()
             
-        output  =  self.model(image)
-        loss    =  self.loss_function(output, label)
-        accuracy = (output == label).float().mean()
+        output  =  self.model(input_)
+        loss    =  self.loss_function(output, output)
+        accuracy = (output == output).float().mean()
         
         return loss, accuracy
 
     def eval_step(self, batch):
-        image, label = batch
+        input_, output = batch
         if self.cuda:
-            image, label = image.cuda(), label.cuda()
+            input_, output = input_.cuda(), output.cuda()
             
-        output  =  self.model(image)
-        return list(zip(image, label, output))
+        output  =  self.model(input_)
+        return list(zip(input_, output, output))
 
     def train_step(self, batch):
         self.optimizer.zero_grad()
 
-        image, label = batch
+        input_, output = batch
 
         if self.cuda:
-            image, label = image.cuda(), label.cuda()
+            input_, output = input_.cuda(), output.cuda()
             
-        output  =  self.model(image)
-        loss    =  self.loss_function(output, label)
+        output  =  self.model(input_)
+        loss    =  self.loss_function(output, output)
         loss.backward()
         self.optimizer.step()
 
@@ -191,7 +191,6 @@ class Trainer:
             if epoch and epoch % self.every_nepoch == 0:
                 loss, accuracy = self.validate_epoch(epoch)
                 print('test epoch: {}, loss:{} accuracy: {}'.format(epoch, loss, accuracy))
-                self.plot_results(epoch)     
 
             loss = self.train_epoch(epoch)
             #print("train epoch: {}, loss: {}".format(epoch, loss))
@@ -204,13 +203,6 @@ class Trainer:
                     
         return True
     
-    def plot_results(self, epoch):
-        input_, target, output = self.eval_epoch(epoch)
-        input_, target, output = [i.detach().cpu() for i in [input_, target, output]]
-        plt.scatter(input_.cpu(), target.cpu(), label='x')
-        plt.scatter(input_.cpu(), output.cpu(), label='x\'')
-        plt.legend()
-        plt.show()
 
 
 
@@ -240,10 +232,10 @@ class Model(nn.Module):
 
 class TSModel(nn.Module):
 
-    def __init__(self, num_classes, input_size, hidden_size, num_layers):
-        super(LSTM, self).__init__()
+    def __init__(self, input_size, output_size, hidden_size, num_layers, seq_length):
+        super().__init__()
         
-        self.num_classes = num_classes
+        self.output_size = output_size
         self.num_layers = num_layers
         self.input_size = input_size
         self.hidden_size = hidden_size
@@ -252,15 +244,17 @@ class TSModel(nn.Module):
         self.lstm = nn.LSTM(input_size=input_size, hidden_size=hidden_size,
                             num_layers=num_layers, batch_first=True)
         
-        self.fc = nn.Linear(hidden_size, num_classes)
+        self.fc = nn.Linear(hidden_size, output_size)
 
     def forward(self, x):
-        h_0 = Variable(torch.zeros(
-            self.num_layers, x.size(0), self.hidden_size))
+        h_0 = torch.zeros(
+            self.num_layers, x.size(0), self.hidden_size)
         
-        c_0 = Variable(torch.zeros(
-            self.num_layers, x.size(0), self.hidden_size))
-        
+        c_0 = torch.zeros(
+            self.num_layers, x.size(0), self.hidden_size)
+
+        # TODO fix this .cuda() 
+        h_0, c_0 = h_0.cuda(), c_0.cuda()
         # Propagate input through LSTM
         ula, (h_out, _) = self.lstm(x, (h_0, c_0))
         
