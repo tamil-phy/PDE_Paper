@@ -36,7 +36,7 @@ class XYDataset(Dataset):
 
 
 class TSDataset(Dataset):
-    def __init__(self, ts, vals, seq_length=10):
+    def __init__(self, ts, vals, seq_length=4):
         
         def sliding_windows(data, seq_length):
             x = []
@@ -48,8 +48,9 @@ class TSDataset(Dataset):
                 x.append(_x)
                 y.append(_y)
 
-            return torch.Tensor(x), torch.Tensor(y).unsqueeze(1)
+            return torch.Tensor(x), torch.Tensor(y)
 
+        ts, vals = ts[::1000], vals[::1000]
         ts, vals = np.array(ts), np.array(vals)
         if ts.ndim < 2:
             ts = np.expand_dims(ts, axis=1)
@@ -62,7 +63,11 @@ class TSDataset(Dataset):
         print('data shape: {}'.format(data.shape))
 
         self.input_, self.output = sliding_windows(data, seq_length)
+        print('input_, output shapes: {}, {}'.format(self.input_.size(), self.output.size()))
+        plt.plot(self.output[:,1])
+        plt.show()
 
+        
         print('shapes: input_, output: {}, {}'.format(self.input_.size(), self.output.size()))
         
     def __len__(self):
