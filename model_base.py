@@ -262,8 +262,7 @@ class TSModel(nn.Module):
         c_0 = torch.zeros(
             self.num_layers, x.size(0), self.hidden_size)
 
-        # TODO fix this .cuda() 
-        h_0, c_0 = h_0.cuda(), c_0.cuda()
+        h_0, c_0 = h_0.to(x.device), c_0.to(x.device)
         # Propagate input through LSTM
         ula, (h_out, _) = self.lstm(x, (h_0, c_0))
         
