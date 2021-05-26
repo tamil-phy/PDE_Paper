@@ -122,6 +122,9 @@ class Trainer:
         if self.cuda:
             self.model.cuda()
 
+    # step functions for train, test, eval
+    # handles one batch at a time
+    # they all have same input signature
     def validate_step(self, batch):
         input_, output = batch
         if self.cuda:
@@ -156,6 +159,7 @@ class Trainer:
 
         return loss
 
+    # epoch level functions 
     def train_epoch(self, epoch):
         self.model.train()
         losses = []
@@ -187,7 +191,8 @@ class Trainer:
             outputs.extend(output)
 
         return [torch.stack(i).squeeze() for i in  zip(*outputs)]
-    
+
+    # the actual training loop
     def do_train(self):
         train_loss = []
         epoch = 0
