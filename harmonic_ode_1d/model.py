@@ -35,8 +35,10 @@ def plot_results_TS(trainer, epoch):
                                                               target.size(),
                                                               output.size()))
     input_, target, output = [i.detach().cpu() for i in [input_, target, output]]
-    plt.scatter(range(target.size(0)), target[:, 1].cpu(), label='x')
-    plt.scatter(range(target.size(0)), output[:, 1].cpu(), label='x\'')
+
+    plt.plot(target[:, 0], target[:, 1],  label='x')
+    plt.scatter(output[:, 0], output[:, 1], color='orange', label='x\'')
+    plt.plot(output[-1, 0], output[-1, 1], 'ro')
     plt.legend()
     plt.show()
 

@@ -34,11 +34,26 @@ def plot_results_TS(trainer, epoch):
     print('shapes: input_, target, ouptut: {}, {}, {}'.format(input_.size(),
                                                               target.size(),
                                                               output.size()))
+    
     input_, target, output = [i.detach().cpu() for i in [input_, target, output]]
-    plt.scatter(range(target.size(0)), target[:, 1].cpu(), label='x')
+
+    plt.plot(range(target.size(0)), target[:, 1].cpu(), label='x')
     plt.scatter(range(target.size(0)), output[:, 1].cpu(), label='x\'')
-    plt.scatter(range(target.size(0)), target[:, 2].cpu(), label='y')
+    plt.plot(range(target.size(0)), target[:, 2].cpu(), label='y')
     plt.scatter(range(target.size(0)), output[:, 2].cpu(), label='y\'')
+
+    plt.legend()
+    plt.show()
+    
+    plt.plot(target[:, 1], target[:, 2],  label='x')
+    plt.plot(output[:, 1], output[:, 2], '--', label='y')
+
+    
+    plt.plot(target[0, 1], target[0, 2], 'b>', label='x start')
+    plt.plot(target[-1, 1], target[-1, 2], 'r>', label='x end')
+
+    plt.plot(output[0, 1], output[0, 2], 'bo' , label='x\' start')
+    plt.plot(output[-1, 1], output[-1, 2], 'ro', label='x\' end')
 
     plt.legend()
     plt.show()
