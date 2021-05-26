@@ -73,7 +73,7 @@ if __name__ == '__main__':
 
         dataset,        
         dataset,
-        batch_size = 10000,
+        batch_size = 100,
 
         weights_path = weights_path
     )
