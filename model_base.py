@@ -112,11 +112,11 @@ class Trainer:
         self.testset       = testset
         
         self.trainloader = DataLoader(trainset,
-                                      #shuffle=True,
+                                      shuffle=False,
                                       batch_size = batch_size)
 
         self.testloader = DataLoader(testset,
-                                     #shuffle=True,
+                                     shuffle=False,
                                      batch_size = batch_size)
         
         self.epochs       = epochs       
