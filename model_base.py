@@ -131,34 +131,34 @@ class Trainer:
     # handles one batch at a time
     # they all have same input signature
     def validate_step(self, batch):
-        input_, output = batch
+        input_, target = batch
         if self.cuda:
-            input_, output = input_.cuda(), output.cuda()
+            input_, target = input_.cuda(), target.cuda()
             
         output  =  self.model(input_)
-        loss    =  self.loss_function(output, output)
+        loss    =  self.loss_function(output, target)
         accuracy = (output == output).float().mean()
         
         return loss, accuracy
 
     def eval_step(self, batch):
-        input_, output = batch
+        input_, target = batch
         if self.cuda:
-            input_, output = input_.cuda(), output.cuda()
+            input_, target = input_.cuda(), target.cuda()
             
         output  =  self.model(input_)
-        return list(zip(input_, output, output))
+        return list(zip(input_, target, output))
 
     def train_step(self, batch):
         self.optimizer.zero_grad()
 
-        input_, output = batch
+        input_, target = batch
 
         if self.cuda:
-            input_, output = input_.cuda(), output.cuda()
+            input_, target = input_.cuda(), target.cuda()
             
         output  =  self.model(input_)
-        loss    =  self.loss_function(output, output)
+        loss    =  self.loss_function(output, target)
         loss.backward()
         self.optimizer.step()
 
