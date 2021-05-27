@@ -31,7 +31,7 @@ for k in range(len(K)):
 
 N_t = N_t.transpose()
 
-time_range = time_range.reshape(5000, 1) #TODO: fix this hardcoding
+time_range = time_range[:, np.newaxis] #TODO: fix this hardcoding
 with open('data.pkl', 'wb') as f:
     print('dumping data...')
     print('shapes: {}, {}'.format(time_range.shape, N_t.shape))
