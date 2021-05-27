@@ -50,7 +50,6 @@ class TSDataset(Dataset):
 
             return torch.Tensor(x), torch.Tensor(y)
 
-        ts, vals = ts[::1000], vals[::1000]
         ts, vals = np.array(ts), np.array(vals)
         if ts.ndim < 2:
             ts = np.expand_dims(ts, axis=1)
