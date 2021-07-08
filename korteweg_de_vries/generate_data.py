@@ -54,9 +54,9 @@ t = np.linspace(0, T, 501)
 print("Computing the solution.")
 sol = kdv_solution(u0, t, L)
 
-filepath = __file__.replace('.py', '.pkl')
+filepath = 'kdv.pkl'
 print('dumping data to {}'.format(filepath))
-pickle.dump({'x': x, 't': t, 'sol': sol},
+pickle.dump( (t, sol), #{'x': x, 't': t, 'sol': sol},
             open('{}/{}'.format(CONFIG.DATA_DIR, filepath), 'wb'))
 
 # plt.figure(figsize=(12, 8))
