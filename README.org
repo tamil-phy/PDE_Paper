@@ -7,5 +7,10 @@
 ** DONE TSDataset and TSModel 
 *** DONE using sliding window to create pseudo samples
 ** DONE plot_results_(XY|TS) to plot outputs
-* TODO [#A] fix data generation 
+* DONE [#A] fix data generation -- was an refactor error
   - looks like there is some line added to the data generated
+* TODO test models on outside the trained time range
+* TODO pull the common code from model.py under tasks 
+** TODO split possible variables into configs?
+* TODO separate experiments separate py scripts
+  code duplication is okay for now.
