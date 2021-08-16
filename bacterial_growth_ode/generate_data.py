@@ -1,7 +1,9 @@
+import os
 import pickle
 import numpy as np
 import matplotlib.pyplot as plt
 
+import CONFIG
 # Set the carrying capacity:
 K = [75, 1.5E2, 3E2]
 
@@ -32,7 +34,10 @@ for k in range(len(K)):
 N_t = N_t.transpose()
 
 time_range = time_range[:, np.newaxis] #TODO: fix this hardcoding
-with open('data.pkl', 'wb') as f:
+
+output_path = CONFIG.get_dataset_path_from_file(__file__)
+print('dataset output path: {}'.format(output_path))
+with open(output_path, 'wb') as f:
     print('dumping data...')
     print('shapes: {}, {}'.format(time_range.shape, N_t.shape))
     pickle.dump((time_range, N_t), f)
@@ -40,7 +45,6 @@ with open('data.pkl', 'wb') as f:
 # Loop through the carrying capacities and plot every 100th point.
 for i in range(len(K)):
     plt.plot(time_range[::100, 0], N_t[::100, i], '.', label='K = ' + str(K[i]))
-
 
     
 # Add appropriate labels and legends. 
