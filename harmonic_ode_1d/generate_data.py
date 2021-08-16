@@ -50,8 +50,12 @@ if __name__ == '__main__':
 
     filepath = __file__.replace('.py', '.pkl')
 
+    
+    output_path = CONFIG.get_dataset_path_from_file(__file__)
+    
+    print('writing dataset to {}'.format(output_path))
     pickle.dump((ts, vals),
-                open('{}/{}'.format(CONFIG.DATA_DIR, filepath), 'wb'))
+                open(output_path, 'wb'))
     
     plt.plot(ts, vals);
     plt.show()
