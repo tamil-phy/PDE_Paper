@@ -36,7 +36,7 @@ class XYDataset(Dataset):
 
 
 class TSDataset(Dataset):
-    def __init__(self, ts, vals, seq_length=4):
+    def __init__(self, ts, vals, seq_length=4, merge_ts_vals=False):
         
         def sliding_windows(data, seq_length):
             x = []
@@ -58,16 +58,19 @@ class TSDataset(Dataset):
             
         print('ts, vals shapes: {}, {}'.format(ts.shape, vals.shape))
 
-        data = np.concatenate([ts, vals], axis=-1)
+        if merge_ts_vals:
+            data = np.concatenate([ts, vals], axis=-1)
+        else:
+            data = vals
+            
         print('data shape: {}'.format(data.shape))
-
+        
         self.input_, self.output = sliding_windows(data, seq_length)
-        print('input_, output shapes: {}, {}'.format(self.input_.size(), self.output.size()))
-        plt.plot(self.output[:,1])
+        print('shapes: input_, output: {}, {}'.format(self.input_.size(), self.output.size()))
+
+        plt.plot(self.output)
         plt.show()
 
-        
-        print('shapes: input_, output: {}, {}'.format(self.input_.size(), self.output.size()))
         
     def __len__(self):
         return len(self.input_)
@@ -90,6 +93,7 @@ def weights_init_uniform(m):
 class Trainer:
     def __init__(
             self,
+            name,
             model,
             loss_function,
             optimizer,
@@ -102,6 +106,7 @@ class Trainer:
             batch_size = 10,
             weights_path = None
     ):
+        self.name = name
         self.model         = model         
         self.loss_function = loss_function  
         self.optimizer     = optimizer 
@@ -196,13 +201,15 @@ class Trainer:
 
         return [torch.stack(i).squeeze() for i in  zip(*outputs)]
 
+
+    
     # the actual training loop
-    def do_train(self):
+    def do_train(self, epochs=0):
         train_loss = []
         epoch = 0
         loss = 1e10
         prev_loss = 1e10
-        tbar = tqdm(range(self.epochs))
+        tbar = tqdm(range(epochs or self.epochs))
         save_count = 0
         for epoch in tbar:
             tbar.set_description('epoch:{} - loss:{:0.4f} - saves:{}'.format(epoch, loss, save_count))
@@ -262,7 +269,7 @@ class TSModel(nn.Module):
         self.lstm = nn.LSTM(input_size=input_size, hidden_size=hidden_size,
                             num_layers=num_layers, batch_first=True)
         
-        self.fc = nn.Linear(hidden_size, output_size)
+        self.fc = nn.Linear(hidden_size * num_layers, output_size)
 
     def forward(self, x):
         h_0 = torch.zeros(
@@ -275,7 +282,7 @@ class TSModel(nn.Module):
         # Propagate input through LSTM
         ula, (h_out, _) = self.lstm(x, (h_0, c_0))
         
-        h_out = h_out.view(-1, self.hidden_size)
+        h_out = h_out.view(-1, self.num_layers * self.hidden_size)
         
         out = self.fc(h_out)
         
