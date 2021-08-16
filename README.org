@@ -14,3 +14,7 @@
 ** TODO split possible variables into configs?
 * TODO separate experiments separate py scripts
   code duplication is okay for now.
+* TODO make bacterial model parameterized over K
+* TODO train XY mode on bacterial growth data
+* TODO train XY model on harmonic_ode_1d
+* TODO different hiddden size for Lstm effect on Kdv
