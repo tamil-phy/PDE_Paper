@@ -28,7 +28,6 @@ def plot_results_XY(trainer, epoch):
     plt.legend()
     plt.show()
 
-    
 def plot_results_TS(trainer, epoch):
     input_, target, output = trainer.eval_epoch(epoch)
     print('shapes: input_, target, ouptut: {}, {}, {}'.format(input_.size(),
@@ -36,20 +35,25 @@ def plot_results_TS(trainer, epoch):
                                                               output.size()))
     input_, target, output = [i.detach().cpu() for i in [input_, target, output]]
 
-    plt.plot(target[:, 0], target[:, 1],  label='x')
-    plt.scatter(output[:, 0], output[:, 1], color='orange', label='x\'')
-    plt.plot(output[-1, 0], output[-1, 1], 'ro')
+    plt.plot(target,  label='x')
+    #plt.scatter(range(0, output.size(0), 1000), output[::1000], s=1, color='orange', label='x\'')
+    plt.scatter(range(0, output.size(0)), output, s=10, color='orange', label='x\'')
+    #plt.plot(output[-1, 0], output[-1], 'ro')
     plt.legend()
+    plt.xlabel('time')
+    plt.ylabel('position')
+    plt.grid()
+    plt.savefig(trainer.name + '.png')
     plt.show()
 
 
 if __name__ == '__main__':
 
-    filepath = 'data.pkl'
+    dataset_path = CONFIG.get_dataset_path_from_file(__file__)
 
     seq_length = 10
-    ts, vals = pickle.load(open(filepath, 'rb'))
-    dataset = model_base.TSDataset(ts, vals,  seq_length)
+    ts, vals = pickle.load(open(dataset_path, 'rb'))
+    dataset = model_base.TSDataset(ts[::1000], vals[::1000],  seq_length)
 
     random_sample  = random.choice(dataset)
     print('random sample: ', random_sample)
@@ -59,8 +63,10 @@ if __name__ == '__main__':
                                100,
                                1,
                                seq_length)
-
-    weights_path = filepath.replace('.pkl', '.pt')
+    
+    weights_path = CONFIG.get_weights_path_from_file(__file__)
+    model_name = os.path.splitext(os.path.basename(weights_path))[0]
+    print(weights_path)
     if os.path.exists(weights_path):
         print('loading old model....')
         model.load_state_dict(torch.load(weights_path))
@@ -69,17 +75,18 @@ if __name__ == '__main__':
         pass
     
     trainer = model_base.Trainer (
+        model_name,
         model,
         torch.nn.L1Loss(),
         torch.optim.Adam(model.parameters()),
 
         dataset,        
         dataset,
-        batch_size = 100,
+        batch_size = 1000,
 
         weights_path = weights_path
     )
 
-    trainer.do_train()
+    trainer.do_train(100)
+    plot_results_TS(trainer, -1)
 
-    plot_results(trainer, epoch)
