@@ -18,11 +18,11 @@ def kdv_exact(x, c):
 def kdv(u, t, L):
     """Differential equations for the KdV equation, discretized in x."""
     # Compute the x derivatives using the pseudo-spectral method.
-    ux = psdiff(u, period=L)
+    ux   = psdiff(u, period=L)
     uxxx = psdiff(u, period=L, order=3)
 
     # Compute du/dt.
-    dudt = -6*u*ux - uxxx
+    dudt = -6 * u * ux - uxxx
 
     return dudt
 
@@ -56,8 +56,10 @@ sol = kdv_solution(u0, t, L)
 
 filepath = 'kdv.pkl'
 print('dumping data to {}'.format(filepath))
-pickle.dump( (t, sol), #{'x': x, 't': t, 'sol': sol},
-            open('{}/{}'.format(CONFIG.DATA_DIR, filepath), 'wb'))
+pickle.dump(
+    (t, sol[::-1, :]), #{'x': x, 't': t, 'sol': sol},
+    open('{}/{}'.format(CONFIG.DATA_DIR, filepath),
+         'wb'))
 
 # plt.figure(figsize=(12, 8))
 plt.imshow(sol[::-1, :], extent=[0, L, 0, T])
