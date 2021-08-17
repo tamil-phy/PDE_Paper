@@ -19,10 +19,10 @@ t  = np.linspace(0, 20, 250000)
 
 sol = odeint(vanderpol, X0, t)
 
-filepath = __file__.replace('.py', '.pkl')
+filepath =  CONFIG.get_dataset_path_from_file(__file__)
 print('dumping data to {}'.format(filepath))
 pickle.dump((t, sol),
-             open('{}/{}'.format(CONFIG.DATA_DIR, filepath), 'wb'))
+             open(filepath, 'wb'))
 
 x = sol[:, 0]
 y = sol[:, 1]
