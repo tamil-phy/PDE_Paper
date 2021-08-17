@@ -3,6 +3,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
+import CONFIG
+
 
 #Runge-Kutta Method Single Time Step
 def rk4(func,t,a,b,c,dt):
@@ -85,7 +87,10 @@ x, y, z = [np.array(i) for i in [x, y, z ]]
 
 print('shapes: x, y, z: {}, {}, {}'.format(x.shape, y.shape, z.shape))
 
-with open('data.pkl', 'wb') as f:
+output_path = CONFIG.get_dataset_path_from_file(__file__)
+print('dataset output path: {}'.format(output_path))
+
+with open(output_path, 'wb') as f:
     print('dumping data...')
     ts, vals = x[:, np.newaxis], np.stack([y, z]).transpose()
     print('shape: ts, vals: {} {}'.format(ts.shape, vals.shape))

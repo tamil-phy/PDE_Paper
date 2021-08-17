@@ -35,7 +35,8 @@ def plot_results_TS(trainer, epoch):
                                                               target.size(),
                                                               output.size()))
     
-    input_, target, output = [i.detach().cpu() for i in [input_, target, output]]
+    input_, target, output = [i.detach().cpu()
+                              for i in [input_, target, output]]
     
     fig = plt.figure(figsize=(12,10))
     # This is how we set the 3D plot
@@ -43,16 +44,16 @@ def plot_results_TS(trainer, epoch):
     
     x,y,z = output[:, 0], output[:, 1], output[:, 2]
     ax.plot(x, y, z, lw=0.5,alpha=0.7)  # Plotting the values
-    ax.scatter(x[-1],y[-1],z[-1],color=(1,0,0)) # Plotting the final values
+    ax.scatter(x[-1], y[-1], z[-1], color=(1,0,0)) # Plotting the final values
     
     #Setting Axis Titles
     ax.set_xlabel("X Axis")
     ax.set_ylabel("Y Axis")
     ax.set_zlabel("Z Axis")
     ax.set_title("Lorenz Attractor")
+    plt.savefig(trainer.name + '.png')
     plt.show()
 
-    
 
 
 if __name__ == '__main__':
@@ -60,7 +61,7 @@ if __name__ == '__main__':
     filepath = 'data.pkl'
     seq_length = 19
     ts, vals = pickle.load(open(filepath, 'rb'))
-    dataset = model_base.TSDataset(ts, vals, seq_length)
+    dataset = model_base.TSDataset(ts, vals, seq_length, merge_ts_vals=True)
 
     random_sample  = random.choice(dataset)
     print('random sample: ', random_sample)
@@ -69,9 +70,12 @@ if __name__ == '__main__':
                                output.size()[-1],
                                100,
                                1,
-                               seq_length)
+                               seq_length,
+                               )
 
-    weights_path = filepath.replace('.pkl', '.pt')
+    weights_path = CONFIG.get_weights_path_from_file(__file__)
+    model_name = os.path.splitext(os.path.basename(weights_path))[0]
+      
     if os.path.exists(weights_path):
         print('loading old model....')
         model.load_state_dict(torch.load(weights_path))
@@ -80,6 +84,7 @@ if __name__ == '__main__':
         pass
     
     trainer = model_base.Trainer (
+        model_name,
         model,
         torch.nn.L1Loss(),
         torch.optim.Adam(model.parameters()),
@@ -91,6 +96,6 @@ if __name__ == '__main__':
         weights_path = weights_path
     )
 
-    trainer.do_train()
+    trainer.do_train(100)
 
-    plot_results(trainer, epoch)
+    plot_results_TS(trainer, -1)
