@@ -57,10 +57,11 @@ def plot_results_TS(trainer, epoch):
 
 
 if __name__ == '__main__':
+    
+    dataset_path = CONFIG.get_dataset_path_from_file(__file__)
 
-    filepath = 'data.pkl'
-    seq_length = 19
-    ts, vals = pickle.load(open(filepath, 'rb'))
+    seq_length = 10
+    ts, vals = pickle.load(open(dataset_path, 'rb'))
     dataset = model_base.TSDataset(ts, vals, seq_length, merge_ts_vals=True)
 
     random_sample  = random.choice(dataset)
