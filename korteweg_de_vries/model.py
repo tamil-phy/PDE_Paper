@@ -37,22 +37,33 @@ def plot_results_TS(trainer, epoch):
     
     input_, target, output = [i.detach().cpu() for i in [input_, target, output]]
 
-    pdb.set_trace()
     
-    plt.imshow(output, extent=[0, 50, 0, 200])
-    plt.colorbar()
-    plt.xlabel('x')
-    plt.ylabel('t')
-    plt.title('Korteweg-de Vries on a Periodic Domain')
+
+    fig, axs = plt.subplots(2, 1, figsize=(2, 10))
+    
+    axs[0].imshow(output, extent=[0, 50, 0, 200])
+    axs[0].set_title('output')
+    axs[0].set_xlabel('x')
+    axs[0].set_ylabel('t')
+    
+    axs[1].imshow(target, extent=[0, 50, 0, 200])
+    axs[1].set_title('target')
+    axs[1].set_xlabel('x')
+    axs[1].set_ylabel('t')
+
+    #axs[0].colorbar()
+    plt.suptitle('Korteweg-de Vries\n(Periodic Domain)')
+    plt.savefig(trainer.name + '.png')
     plt.show()
 
 
 
 if __name__ == '__main__':
 
-    filepath = '../data/kdv.pkl'
-    seq_length = 19
-    ts, vals = pickle.load(open(filepath, 'rb'))
+    dataset_path = CONFIG.get_dataset_path_from_file(__file__)
+
+    seq_length = 10
+    ts, vals = pickle.load(open(dataset_path, 'rb'))
     dataset = model_base.TSDataset(ts, vals, seq_length)
 
     random_sample  = random.choice(dataset)
@@ -60,19 +71,26 @@ if __name__ == '__main__':
     input_, output = random_sample
     model = model_base.TSModel(input_.size()[-1],
                                output.size()[-1],
-                               100,
+                               50,
                                1,
                                seq_length)
 
-    weights_path = filepath.replace('.pkl', '.pt')
+    weights_path = CONFIG.get_weights_path_from_file(__file__)
+    model_name = os.path.splitext(os.path.basename(weights_path))[0]
+      
     if os.path.exists(weights_path):
-        print('loading old model....')
-        model.load_state_dict(torch.load(weights_path))
+        try:
+            print('loading old model....: {}'.format(weights_path))
+            model.load_state_dict(torch.load(weights_path))
+        except:
+            print('loading model failed')
+            model.apply(model_base.weights_init_uniform)
     else:
         model.apply(model_base.weights_init_uniform)
         pass
     
     trainer = model_base.Trainer (
+        model_name,
         model,
         torch.nn.L1Loss(),
         torch.optim.Adam(model.parameters()),
@@ -80,10 +98,12 @@ if __name__ == '__main__':
         dataset,        
         dataset,
         batch_size = 10000,
-        epochs = 2,
+        epochs = 10000,
         weights_path = weights_path
     )
 
+    plot_results_TS(trainer, 0)
+    
     trainer.do_train()
 
     plot_results_TS(trainer, 0)

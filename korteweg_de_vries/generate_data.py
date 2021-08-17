@@ -54,12 +54,14 @@ t = np.linspace(0, T, 501)
 print("Computing the solution.")
 sol = kdv_solution(u0, t, L)
 
-filepath = 'kdv.pkl'
-print('dumping data to {}'.format(filepath))
-pickle.dump(
-    (t, sol[::-1, :]), #{'x': x, 't': t, 'sol': sol},
-    open('{}/{}'.format(CONFIG.DATA_DIR, filepath),
-         'wb'))
+
+output_path = CONFIG.get_dataset_path_from_file(__file__)
+print('dataset output path: {}'.format(output_path))
+with open(output_path, 'wb') as f:
+    print('dumping data to {}'.format(output_path))
+    pickle.dump(
+        (t, sol[::-1, :]), #{'x': x, 't': t, 'sol': sol},
+        f)
 
 # plt.figure(figsize=(12, 8))
 plt.imshow(sol[::-1, :], extent=[0, L, 0, T])
@@ -68,5 +70,5 @@ plt.xlabel('x')
 plt.ylabel('t')
 plt.title('Korteweg-de Vries on a Periodic Domain')
 # plt.tight_layout()
-plt.savefig(filepath.replace('.pkl', '.png'))
+plt.savefig(output_path.replace('.pkl', '.png'))
 plt.show()
