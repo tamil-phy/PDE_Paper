@@ -1,0 +1,13 @@
+{
+
+    "DATA_DIR" : "/home/vanangamudi/agam/projects/code/saama/PDE_Paper/data",
+    "WEIGHTS_DIR" : "/home/vanangamudi/agam/projects/code/saama/PDE_Paper/weights",
+
+    "metrics_path" : {
+	"loss_path" : "loss.txt",
+	"accuracy_path" : "accuracy.txt"
+    },
+
+    "config_hash" : "0xdeadbeef",
+    "cuda" : true
+}

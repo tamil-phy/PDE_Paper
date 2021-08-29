@@ -1,3 +1,10 @@
+import aconfig
+
+import logging
+logging.basicConfig(format=aconfig.logging_format)
+log = logging.getLogger('model_base')
+log.setLevel(logging.DEBUG)
+
 import os
 import copy
 import sys
@@ -19,57 +26,62 @@ from torch.utils.data import DataLoader, Dataset
 
 import matplotlib.pyplot as plt
 
-
 import CONFIG
 
 class XYDataset(Dataset):
-    def __init__(self, ts, vals):
-        self.ts = torch.Tensor(ts).unsqueeze(1)
-        self.vals = torch.Tensor(vals).unsqueeze(1)
+    def __init__(self, config, hpconfig,  X, Y):
+        assert len(X) == len(Y)
+        resample_ratio = len(X) // hpconfig['resample_ratio']
+        X = X[::resample_ratio]
+        Y = Y[::resample_ratio]
+
+        self.X = torch.Tensor(X)
+        self.Y = torch.Tensor(Y)
         
     def __len__(self):
-        return len(self.ts)
+        return len(self.X)
 
     def __getitem__(self, index):
-        return [self.ts[index].squeeze().unsqueeze(0),
-                self.vals[index].squeeze().unsqueeze(0)]
+        return [self.X[index],
+                self.Y[index]]
 
 
 class TSDataset(Dataset):
-    def __init__(self, ts, vals, seq_length=4, merge_ts_vals=False):
+    def __init__(self, config, hpconfig, time_axis, values):
         
         def sliding_windows(data, seq_length):
-            x = []
-            y = []
+            X = []
+            Y = []
             
-            for i in range(len(data)-seq_length-1):
-                _x = data[i:(i+seq_length)]
-                _y = data[i+seq_length]
-                x.append(_x)
-                y.append(_y)
+            for i in range( len(data) - seq_length - 1 ):
+                x = data[i:(i+seq_length)]
+                y = data[i+seq_length]
+                X.append(x)
+                Y.append(y)
 
-            return torch.Tensor(x), torch.Tensor(y)
+            return torch.Tensor(X), torch.Tensor(Y)
 
-        ts, vals = np.array(ts), np.array(vals)
-        if ts.ndim < 2:
-            ts = np.expand_dims(ts, axis=1)
-        if vals.ndim < 2:
-            vals = np.expand_dims(vals, axis=1)
-            
-        print('ts, vals shapes: {}, {}'.format(ts.shape, vals.shape))
-
-        if merge_ts_vals:
-            data = np.concatenate([ts, vals], axis=-1)
-        else:
-            data = vals
-            
-        print('data shape: {}'.format(data.shape))
+        self.config   = config
+        self.hpconfig = hpconfig
+        assert len(time_axis) == len(values)
         
-        self.input_, self.output = sliding_windows(data, seq_length)
+        time_axis, values = np.array(time_axis), np.array(values)
+        resample_ratio = len(time_axis) // hpconfig['resample_ratio']
+        time_axis = time_axis[::resample_ratio]
+        values    = values   [::resample_ratio]
+        
+        if time_axis.ndim < 2:
+            time_axis = np.expand_dims(time_axis, axis=1)
+        if values.ndim < 2:
+            values = np.expand_dims(values, axis=1)
+            
+        if hpconfig['merge_time_axis_values']:
+            data = np.concatenate([time_axis, values], axis=-1)
+        else:
+            data = values
+            
+        self.input_, self.output = sliding_windows(data, hpconfig['seq_length'])
         print('shapes: input_, output: {}, {}'.format(self.input_.size(), self.output.size()))
-
-        plt.plot(self.output)
-        plt.show()
 
         
     def __len__(self):
@@ -78,7 +90,13 @@ class TSDataset(Dataset):
     def __getitem__(self, index):
         return [self.input_[index],
                 self.output[index]]
-    
+
+    def __add__(self, other):
+        new = copy.deepcopy(other)
+        new.input_ = torch.Tensor(self.input_.tolist() + other.input_.tolist())
+        new.output = torch.Tensor(self.output.tolist() + other.output.tolist())
+
+        return new
     
 # takes in a module and applies the specified weight initialization
 def weights_init_uniform(m):
@@ -93,6 +111,8 @@ def weights_init_uniform(m):
 class Trainer:
     def __init__(
             self,
+            config,
+            hpconfig,
             name,
             model,
             loss_function,
@@ -106,7 +126,11 @@ class Trainer:
             batch_size = 10,
             weights_path = None
     ):
+
+        self.config = config
+        self.hpconfig = hpconfig
         self.name = name
+        
         self.model         = model         
         self.loss_function = loss_function  
         self.optimizer     = optimizer 
@@ -126,11 +150,22 @@ class Trainer:
         self.epochs       = epochs       
         self.every_nepoch = every_nepoch
         self.weights_path = weights_path 
+
+        self.loss_records     = []
+        self.accuracy_records = []
         
-        self.cuda = cuda
+        self.cuda = config['cuda']
+        self.cuda = cuda #function args overrides config.cuda
         if self.cuda:
             self.model.cuda()
 
+
+    def write_metric(self, metric, path):
+        with open(self.config.metrics_path[path], 'w') as f:
+            for rec in self.loss_records:
+                f.write('{}\t{}'.format(*rec))
+
+    
     # step functions for train, test, eval
     # handles one batch at a time
     # they all have same input signature
@@ -202,17 +237,12 @@ class Trainer:
         return [torch.stack(i).squeeze() for i in  zip(*outputs)]
 
 
-    
-    # the actual training loop
-    def do_train(self, epochs=0):
-        train_loss = []
-        epoch = 0
-        loss = 1e10
-        prev_loss = 1e10
-        tbar = tqdm(range(epochs or self.epochs))
+    def training_loop(self, epochs):
+        epoch_bar = tqdm(range(self.epochs))
         save_count = 0
-        for epoch in tbar:
-            tbar.set_description('epoch:{} - loss:{:0.4f} - saves:{}'.format(epoch, loss, save_count))
+        for epoch in epoch_bar:
+            epoch_bar.set_description(self.callbacks['set_description']())
+            
             if epoch and epoch % self.every_nepoch == 0:
                 loss, accuracy = self.validate_epoch(epoch)
                 print('test epoch: {}, loss:{} accuracy: {}'.format(epoch, loss, accuracy))
@@ -228,11 +258,40 @@ class Trainer:
                     
         return True
     
+    # the actual training loop
+    def do_train(self, epochs=0):
+        train_loss = []
+        epoch = 0
+        loss = 1e10
+        prev_loss = 1e10
+        epoch_bar = tqdm(range(epochs or self.epochs))
+        save_count = 0
+        for epoch in epoch_bar:
+            epoch_bar.set_description('epoch:{} - loss:{:0.4f} - saves:{}'.format(epoch, loss, save_count))
+            if epoch and epoch % self.every_nepoch == 0:
+                loss, accuracy = self.validate_epoch(epoch)
+                self.accuracy_records.append((epoch, accuracy))
+
+                print('test epoch: {}, loss:{} accuracy: {}'.format(epoch, loss, accuracy))
+                self.write_metric(loss, 'loss_path')
+                self.write_metric(accuracy, 'accuracy_path')
+                
+            loss = self.train_epoch(epoch)
+            self.loss_records.append((epoch, loss))
+
+            if prev_loss > loss:
+                prev_loss = loss
+                if self.weights_path:
+                    torch.save(copy.deepcopy(self.model).cpu().state_dict(), self.weights_path)
+                    save_count += 1
+                    
+        return True
+    
 
 
 
 class Model(nn.Module):
-    def __init__(self, input_size, output_size):
+    def __init__(self, config, hpconfig, input_size, output_size):
 
         super().__init__()
         self.fc1 = nn.Linear(input_size, 64)
@@ -257,19 +316,22 @@ class Model(nn.Module):
 
 class TSModel(nn.Module):
 
-    def __init__(self, input_size, output_size, hidden_size, num_layers, seq_length):
+    def __init__(self, config, hpconfig, input_size, output_size):
         super().__init__()
+
+        self.hpconfig = hpconfig
         
-        self.output_size = output_size
-        self.num_layers = num_layers
         self.input_size = input_size
-        self.hidden_size = hidden_size
-        self.seq_length = seq_length
+        self.output_size = output_size
+
+        self.num_layers = hpconfig['num_layers']
+        self.hidden_size = hpconfig['hidden_size']
+        self.seq_length  = hpconfig['seq_length']
         
-        self.lstm = nn.LSTM(input_size=input_size, hidden_size=hidden_size,
-                            num_layers=num_layers, batch_first=True)
+        self.lstm = nn.LSTM(input_size=input_size, hidden_size=self.hidden_size,
+                            num_layers=self.num_layers, batch_first=True)
         
-        self.fc = nn.Linear(hidden_size * num_layers, output_size)
+        self.fc = nn.Linear(self.hidden_size * self.num_layers, output_size)
 
     def forward(self, x):
         h_0 = torch.zeros(

@@ -40,7 +40,7 @@ print('dataset output path: {}'.format(output_path))
 with open(output_path, 'wb') as f:
     print('dumping data...')
     print('shapes: {}, {}'.format(time_range.shape, N_t.shape))
-    pickle.dump((time_range, N_t), f)
+    pickle.dump((time_range, N_t, K), f)
     
 # Loop through the carrying capacities and plot every 100th point.
 for i in range(len(K)):

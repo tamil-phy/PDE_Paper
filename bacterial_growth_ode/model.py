@@ -1,3 +1,10 @@
+import config_utils
+
+import logging
+logging.basicConfig(format=config_utils.logging_format)
+log = logging.getLogger('model_base')
+log.setLevel(logging.DEBUG)
+
 import os
 import copy
 import sys
@@ -18,7 +25,7 @@ from torch import nn
 from torch.utils.data import DataLoader, Dataset
 import model_base
 
-import CONFIG
+import config_utils
 
 def plot_results_XY(trainer, epoch):
     input_, target, output = trainer.eval_epoch(epoch)
@@ -46,30 +53,63 @@ def plot_results_TS(trainer, epoch):
     #plt.plot(range(target.size(0)), target[:, 3].cpu(), label='z')
     #plt.scatter(range(target.size(0)), output[:, 3].cpu(), label='z\'')
 
+    plt.xlabel('time')
+    plt.ylabel('population')
     plt.legend()
+    plt.savefig(trainer.name + '.png')
     plt.show()
     
 
-
 if __name__ == '__main__':
-    
-    dataset_path = CONFIG.get_dataset_path_from_file(__file__)
 
-    seq_length = 10
-    ts, vals = pickle.load(open(dataset_path, 'rb'))
-    dataset = model_base.TSDataset(ts, vals[:, 0], seq_length)
+    config = json.load(open('../config.json'))
+    hpconfig = json.load(open('hpconfig.json'))
+    config['hpconfig_name'] = 'hpconfig'
+    pprint(hpconfig)
+    pprint(config)
+    config_utils.init_config(config, hpconfig)
+    assert config_utils.config != None
 
-    random_sample  = random.choice(dataset)
-    print('random sample: ', random_sample)
-    input_, output = random_sample
-    model = model_base.TSModel(input_.size()[-1],
-                               output.size()[-1],
-                               100,
-                               1,
-                               seq_length)
-
-    weights_path = CONFIG.get_weights_path_from_file(__file__)
+    dataset_path = config_utils.get_dataset_path_from_file(__file__)
+    weights_path = config_utils.get_weights_path_from_file(__file__)
     model_name = os.path.splitext(os.path.basename(weights_path))[0]
+
+    ts, vals, K = pickle.load(open(dataset_path, 'rb'))
+    
+    ts = torch.Tensor(ts)
+    vals = torch.Tensor(vals)
+    print('ts: {}'.format(ts.size()))
+    print('vals: {}'.format(vals.size()))
+    kth_samples = {}
+    for ki, k in enumerate(K):
+        k = torch.Tensor([k]).expand_as(ts)
+        log.debug('sizes: k, v: {}, {}'.format(k.size(), vals[:, ki].size()))
+        kth_samples[k] = torch.cat([vals[:, ki].unsqueeze(1), k])
+        
+    if hpconfig['model'] == 'time-series':
+        dataset = []
+        for k, samples in kth_samples.items():
+            dataset.append(model_base.TSDataset(config_utils.config, hpconfig, ts, vals))
+
+        d = dataset[0] 
+        for di in dataset[1:]:
+            d = d + di
+
+        dataset = d
+        random_sample  = random.choice(dataset)
+        print('random sample: ', random_sample)
+        input_, output = random_sample
+        model = model_base.TSModel(config_utils.config, hpconfig,
+                                   input_.size()[-1],  output.size()[-1])
+        
+    if hpconfig['model'] == 'xy':     
+        dataset = model_base.XYDataset(config_utils.config, hpconfig, ts, vals)
+
+        random_sample  = random.choice(dataset)
+        print('random sample: ', random_sample)
+        input_, output = random_sample
+        model = model_base.Model(config_utils.config, hpconfig,
+                                 input_.size()[-1],  output.size()[-1])
         
     if os.path.exists(weights_path):
         print('loading old model....')
@@ -79,18 +119,18 @@ if __name__ == '__main__':
         pass
     
     trainer = model_base.Trainer (
+        config_utils.config,
+        hpconfig,
         model_name,
         model,
         torch.nn.L1Loss(),
         torch.optim.Adam(model.parameters()),
-
+        
         dataset,        
         dataset,
-        batch_size = 10000,
-
+        batch_size = 100,
+        
         weights_path = weights_path
     )
-
-    trainer.do_train()
-
-    plot_results_TS(trainer, -1)
+    
+    trainer.do_train(1000)
