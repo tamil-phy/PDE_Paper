@@ -25,6 +25,8 @@ from torch import nn
 from torch.utils.data import DataLoader, Dataset
 import model_base
 
+from functools import partial
+
 import config_utils
 
 def plot_results_XY(trainer, epoch):
@@ -44,21 +46,22 @@ def plot_results_TS(trainer, epoch):
     
     input_, target, output = [i.detach().cpu() for i in [input_, target, output]]
     plt.plot(range(target.size(0)), target.cpu(), label='x')
-    plt.scatter(range(0, target.size(0), 100), output[::100].cpu(), label='x\'', color='orange')
+    plt.scatter(range(0, target.size(0)), output[:, 0].cpu())
+    #for i in range(target.size(1)): 
+    #    plt.scatter(range(0, target.size(0)), output[:, i].cpu())
     
-    #plt.plot(range(target.size(0)), target[:, 1].cpu(), label='x')
-    #plt.scatter(range(target.size(0)), output[:, 1].cpu(), label='x\'')
-    #plt.plot(range(target.size(0)), target[:, 2].cpu(), label='y')
-    #plt.scatter(range(target.size(0)), output[:, 2].cpu(), label='y\'')
-    #plt.plot(range(target.size(0)), target[:, 3].cpu(), label='z')
-    #plt.scatter(range(target.size(0)), output[:, 3].cpu(), label='z\'')
-
     plt.xlabel('time')
     plt.ylabel('population')
     plt.legend()
     plt.savefig(trainer.name + '.png')
     plt.show()
-    
+
+
+def mse_loss(input, target):
+    return torch.mean((input - target) ** 2)
+
+def weighted_mse_loss(input, target, weight):
+    return torch.mean(weight * (input - target) ** 2)
 
 if __name__ == '__main__':
 
@@ -75,30 +78,38 @@ if __name__ == '__main__':
     model_name = os.path.splitext(os.path.basename(weights_path))[0]
 
     ts, vals, K = pickle.load(open(dataset_path, 'rb'))
+    plt.plot(ts, vals)
+    plt.show()
     
     ts = torch.Tensor(ts)
     vals = torch.Tensor(vals)
     print('ts: {}'.format(ts.size()))
     print('vals: {}'.format(vals.size()))
     kth_samples = {}
+    
+    loss_weight = torch.Tensor([1, 0]) # vals_k, k in torch.cat() below
     for ki, k in enumerate(K):
         k = torch.Tensor([k]).expand_as(ts)
         log.debug('sizes: k, v: {}, {}'.format(k.size(), vals[:, ki].size()))
-        kth_samples[k] = torch.cat([vals[:, ki].unsqueeze(1), k])
+        kth_samples[k] = torch.cat([vals[:, ki].unsqueeze(1), k], dim=-1)
         
     if hpconfig['model'] == 'time-series':
         dataset = []
         for k, samples in kth_samples.items():
-            dataset.append(model_base.TSDataset(config_utils.config, hpconfig, ts, vals))
+            dataset.append(model_base.TSDataset(config_utils.config, hpconfig, ts, samples))
 
-        d = dataset[0] 
-        for di in dataset[1:]:
-            d = d + di
+        trainset = dataset[0] 
+        for di in dataset[1:-1]:
+            trainset = trainset + di
 
-        dataset = d
+        testset = dataset[-1]
+        dataset = trainset + testset
         random_sample  = random.choice(dataset)
-        print('random sample: ', random_sample)
         input_, output = random_sample
+        
+        print('random sample: ', random_sample)
+        print('input_, output: {}, {}'.format(input_.size(), output.size()))
+
         model = model_base.TSModel(config_utils.config, hpconfig,
                                    input_.size()[-1],  output.size()[-1])
         
@@ -123,14 +134,15 @@ if __name__ == '__main__':
         hpconfig,
         model_name,
         model,
-        torch.nn.L1Loss(),
+        partial(weighted_mse_loss, weight=loss_weight.cuda() if config['cuda'] else loss_weight),
         torch.optim.Adam(model.parameters()),
         
-        dataset,        
-        dataset,
+        testset,        
+        testset,
         batch_size = 100,
         
         weights_path = weights_path
     )
     
     trainer.do_train(1000)
+    plot_results_TS(trainer, -1)

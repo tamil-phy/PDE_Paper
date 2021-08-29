@@ -2,7 +2,7 @@ import os
 import hashlib
 import json
 
-logging_format = "%(levelname)-8s:%(filename)s.%(funcName)20s >>   %(message)s",
+logging_format = "%(levelname)-8s:%(filename)s.%(funcName)20s >>   %(message)s"
 config = None
 
 def hash_config(config):

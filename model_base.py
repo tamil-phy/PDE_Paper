@@ -26,11 +26,9 @@ from torch.utils.data import DataLoader, Dataset
 
 import matplotlib.pyplot as plt
 
-import CONFIG
-
 class XYDataset(Dataset):
     def __init__(self, config, hpconfig,  X, Y):
-        assert len(X) == len(Y)
+        assert len(X) == len(Y), '{} != {}'.format(len(X), len(Y))
         resample_ratio = len(X) // hpconfig['resample_ratio']
         X = X[::resample_ratio]
         Y = Y[::resample_ratio]
@@ -63,7 +61,8 @@ class TSDataset(Dataset):
 
         self.config   = config
         self.hpconfig = hpconfig
-        assert len(time_axis) == len(values)
+        assert len(time_axis) == len(values) ,\
+            '{} != {}'.format(len(time_axis), len(values))
         
         time_axis, values = np.array(time_axis), np.array(values)
         resample_ratio = len(time_axis) // hpconfig['resample_ratio']
@@ -236,28 +235,6 @@ class Trainer:
 
         return [torch.stack(i).squeeze() for i in  zip(*outputs)]
 
-
-    def training_loop(self, epochs):
-        epoch_bar = tqdm(range(self.epochs))
-        save_count = 0
-        for epoch in epoch_bar:
-            epoch_bar.set_description(self.callbacks['set_description']())
-            
-            if epoch and epoch % self.every_nepoch == 0:
-                loss, accuracy = self.validate_epoch(epoch)
-                print('test epoch: {}, loss:{} accuracy: {}'.format(epoch, loss, accuracy))
-
-            loss = self.train_epoch(epoch)
-            #print("train epoch: {}, loss: {}".format(epoch, loss))
-
-            if prev_loss > loss:
-                prev_loss = loss
-                if self.weights_path:
-                    torch.save(copy.deepcopy(self.model).cpu().state_dict(), self.weights_path)
-                    save_count += 1
-                    
-        return True
-    
     # the actual training loop
     def do_train(self, epochs=0):
         train_loss = []

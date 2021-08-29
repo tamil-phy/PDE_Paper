@@ -1,0 +1,11 @@
+{
+    'model' : 'xy', #or timeseries
+    'hidden_size' : 100, #for both MLP and LSTM
+
+    'resample_ratio' : 100,
+
+    #time series parameters
+    'num_layers' : 2,
+    'merge_ts_values': true,
+    'seq_length' : 10
+}
