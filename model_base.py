@@ -45,41 +45,31 @@ class XYDataset(Dataset):
 
 
 class TSDataset(Dataset):
-    def __init__(self, config, hpconfig, time_axis, values):
+    def __init__(self, config, hpconfig, input_, output):
         
-        def sliding_windows(data, seq_length):
+        def sliding_windows(input_, output, seq_length):
             X = []
             Y = []
             
-            for i in range( len(data) - seq_length - 1 ):
-                x = data[i:(i+seq_length)]
-                y = data[i+seq_length]
+            for i in range( len(input_) - seq_length - 1 ):
+                x = input_[i:(i+seq_length)]
+                y = output[i+seq_length]
                 X.append(x)
-                Y.append(y)
+                Y.append([y])
 
             return torch.Tensor(X), torch.Tensor(Y)
 
         self.config   = config
         self.hpconfig = hpconfig
-        assert len(time_axis) == len(values) ,\
-            '{} != {}'.format(len(time_axis), len(values))
+        assert len(input_) == len(output) ,\
+            '{} != {}'.format(len(input_), len(output))
         
-        time_axis, values = np.array(time_axis), np.array(values)
-        resample_ratio = len(time_axis) // hpconfig['resample_ratio']
-        time_axis = time_axis[::resample_ratio]
-        values    = values   [::resample_ratio]
+        input_, output = np.array(input_), np.array(output)
+        resample_ratio = len(input_) // hpconfig['resample_ratio']
+        input_ = input_[::resample_ratio]
+        output    = output   [::resample_ratio]
         
-        if time_axis.ndim < 2:
-            time_axis = np.expand_dims(time_axis, axis=1)
-        if values.ndim < 2:
-            values = np.expand_dims(values, axis=1)
-            
-        if hpconfig['merge_time_axis_values']:
-            data = np.concatenate([time_axis, values], axis=-1)
-        else:
-            data = values
-            
-        self.input_, self.output = sliding_windows(data, hpconfig['seq_length'])
+        self.input_, self.output = sliding_windows(input_, output, hpconfig['seq_length'])
         print('shapes: input_, output: {}, {}'.format(self.input_.size(), self.output.size()))
 
         

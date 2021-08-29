@@ -46,7 +46,7 @@ def plot_results_TS(trainer, epoch):
     
     input_, target, output = [i.detach().cpu() for i in [input_, target, output]]
     plt.plot(range(target.size(0)), target.cpu(), label='x')
-    plt.scatter(range(0, target.size(0)), output[:, 0].cpu())
+    plt.scatter(range(0, target.size(0)), output.cpu())
     #for i in range(target.size(1)): 
     #    plt.scatter(range(0, target.size(0)), output[:, i].cpu())
     
@@ -91,12 +91,14 @@ if __name__ == '__main__':
     for ki, k in enumerate(K):
         k = torch.Tensor([k]).expand_as(ts)
         log.debug('sizes: k, v: {}, {}'.format(k.size(), vals[:, ki].size()))
-        kth_samples[k] = torch.cat([vals[:, ki].unsqueeze(1), k], dim=-1)
+        input_ = torch.cat([vals[:, ki].unsqueeze(1), k, ts], dim=-1)
+        kth_samples[input_] = vals[:, ki]
         
     if hpconfig['model'] == 'time-series':
         dataset = []
-        for k, samples in kth_samples.items():
-            dataset.append(model_base.TSDataset(config_utils.config, hpconfig, ts, samples))
+        for input_, output in kth_samples.items():
+            print('ds: input_, output: {}, {}'.format(input_.size(), output.size()))
+            dataset.append(model_base.TSDataset(config_utils.config, hpconfig, input_, output))
 
         trainset = dataset[0] 
         for di in dataset[1:-1]:
@@ -134,7 +136,7 @@ if __name__ == '__main__':
         hpconfig,
         model_name,
         model,
-        partial(weighted_mse_loss, weight=loss_weight.cuda() if config['cuda'] else loss_weight),
+        torch.nn.L1Loss(), #partial(weighted_mse_loss, weight=loss_weight.cuda() if config['cuda'] else loss_weight),
         torch.optim.Adam(model.parameters()),
         
         testset,        
