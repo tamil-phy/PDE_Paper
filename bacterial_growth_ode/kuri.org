@@ -1,0 +1,67 @@
+
+* DONE shuffling hinders performance greatly
+  for every K, [vals, k] tensor is built and used as the input
+
+  
+* DONE mixing K into lstm output does not allow generalizing to unseen K
+
+** generated data with K=range(20, 500, 20)
+   #+begin_src python
+    loss_weight = torch.Tensor([1, 0]) # vals_k, k in torch.cat() below
+    for ki, k in enumerate(K):
+        input_ = torch.cat([vals[:, ki].unsqueeze(1), ts], dim=-1)
+        kth_samples[k] = input_, vals[:, ki]
+        
+    if hpconfig['model'] == 'time-series':
+        dataset = []
+        for k, (input_, output) in kth_samples.items():
+            print('ds: input_, output: {}, {}'.format(input_.size(), output.size()))
+            dataset.append(model_base.TSDataset(config_utils.config, hpconfig,
+                                                'K={}'.format(k),
+                                                input_, output))
+
+        trainset = dataset[0]
+        for di in dataset[21::2]:
+            trainset += di
+
+        testset = dataset[1]
+        for di in dataset[3::2]:
+            testset +=  di
+
+
+
+   #+end_src
+** for k = 7, 150, 300
+  git commit 92bcac30e081cbf122de09110b0c5bc633dd347c
+  #+begin_src python
+
+    loss_weight = torch.Tensor([1, 0]) # vals_k, k in torch.cat() below
+    for ki, k in enumerate(K):
+	k = torch.Tensor([k]).expand_as(ts)
+	log.debug('sizes: k, v: {}, {}'.format(k.size(), vals[:, ki].size()))
+	input_ = torch.cat([vals[:, ki].unsqueeze(1), k, ts], dim=-1)
+	kth_samples[input_] = vals[:, ki]
+
+    if hpconfig['model'] == 'time-series':
+	dataset = []
+	for input_, output in kth_samples.items():
+	    print('ds: input_, output: {}, {}'.format(input_.size(), output.size()))
+	    dataset.append(model_base.TSDataset(config_utils.config, hpconfig, input_, output))
+
+	trainset = dataset[-1] 
+	for di in dataset[1:-1]:
+	    trainset = trainset + di
+
+	testset = dataset[0]
+	#dataset = trainset + testset
+	random_sample  = random.choice(trainset)
+	input_, output = random_sample
+
+	print('random sample: ', random_sample)
+	print('input_, output: {}, {}'.format(input_.size(), output.size()))
+
+	model = model_base.TSModel(config_utils.config, hpconfig,
+				   input_.size()[-1],  output.size()[-1])
+
+    
+  #+end_src

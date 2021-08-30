@@ -3,9 +3,21 @@ import pickle
 import numpy as np
 import matplotlib.pyplot as plt
 
-import CONFIG
+import config_utils
+import json
+from pprint import pprint, pformat
+
+config = json.load(open('../config.json'))
+hpconfig = json.load(open('hpconfig.json'))
+config['hpconfig_name'] = 'hpconfig'
+pprint(hpconfig)
+pprint(config)
+config_utils.init_config(config, hpconfig)
+assert config_utils.config != None
+
+
 # Set the carrying capacity:
-K = [75, 1.5E2, 3E2]
+K = range(20, 500, 20)#[75, 1.5E2, 3E2]
 
 # Extend the total time of the integration
 delta_t = 0.1
@@ -35,7 +47,7 @@ N_t = N_t.transpose()
 
 time_range = time_range[:, np.newaxis] #TODO: fix this hardcoding
 
-output_path = CONFIG.get_dataset_path_from_file(__file__)
+output_path = config_utils.get_dataset_path_from_file(__file__)
 print('dataset output path: {}'.format(output_path))
 with open(output_path, 'wb') as f:
     print('dumping data...')
