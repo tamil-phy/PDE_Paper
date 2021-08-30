@@ -27,14 +27,21 @@ from torch.utils.data import DataLoader, Dataset
 import matplotlib.pyplot as plt
 
 class XYDataset(Dataset):
-    def __init__(self, config, hpconfig,  X, Y):
+    def __init__(self, config, hpconfig,  name, X, Y):
         assert len(X) == len(Y), '{} != {}'.format(len(X), len(Y))
+
+        self.config   = config
+        self.hpconfig = hpconfig
+        self.name = name
+        
         resample_ratio = len(X) // hpconfig['resample_ratio']
         X = X[::resample_ratio]
         Y = Y[::resample_ratio]
 
         self.X = torch.Tensor(X)
         self.Y = torch.Tensor(Y)
+
+
         
     def __len__(self):
         return len(self.X)
@@ -45,7 +52,7 @@ class XYDataset(Dataset):
 
 
 class TSDataset(Dataset):
-    def __init__(self, config, hpconfig, input_, output):
+    def __init__(self, config, hpconfig, name, input_, output):
         
         def sliding_windows(input_, output, seq_length):
             X = []
@@ -61,6 +68,7 @@ class TSDataset(Dataset):
 
         self.config   = config
         self.hpconfig = hpconfig
+        self.name = name
         assert len(input_) == len(output) ,\
             '{} != {}'.format(len(input_), len(output))
         
@@ -113,7 +121,8 @@ class Trainer:
             epochs = 1000000,
             every_nepoch = 1000,
             batch_size = 10,
-            weights_path = None
+            weights_path = None,
+            collate_fn = None,
     ):
 
         self.config = config
@@ -129,12 +138,14 @@ class Trainer:
         self.testset       = testset
         
         self.trainloader = DataLoader(trainset,
-                                     shuffle=self.hpconfig['trainset_shuffle'],
-                                      batch_size = self.hpconfig["batch_size"])                         
-
+                                      shuffle=self.hpconfig['trainset_shuffle'],
+                                      batch_size = self.hpconfig["batch_size"],
+                                      collate_fn = collate_fn)
+        
         self.testloader = DataLoader(testset,
                                      shuffle=self.hpconfig['testset_shuffle'],
-                                     batch_size = self.hpconfig["batch_size"])
+                                     batch_size = self.hpconfig["batch_size"],
+                                     collate_fn = collate_fn)
         
         self.epochs       = epochs       
         self.every_nepoch = every_nepoch
@@ -165,7 +176,7 @@ class Trainer:
             
         output  =  self.model(input_)
         loss    =  self.loss_function(output, target)
-        accuracy = (output == output).float().mean()
+        accuracy = (output == target).float().mean()
         
         return loss, accuracy
 

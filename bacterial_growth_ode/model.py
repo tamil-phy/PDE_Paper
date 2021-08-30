@@ -57,11 +57,34 @@ def plot_results_TS(trainer, result):
     plt.show()
 
 
+def plot_ts_output(trainer, testsets):
+    for testset in testsets:
+        input_, target, output = trainer.eval_epoch(-1, testset)
+        print('shapes: input_, target, ouptut: {}, {}, {}'.format(input_.size(),
+                                                                  target.size(),
+                                                                  output.size()))
+    
+        input_, target, output = [i.detach().cpu() for i in [input_, target, output]]
+        plt.plot(range(target.size(0)), target.cpu(), label=testset.name)
+        plt.scatter(range(0, target.size(0)), output.cpu())
+        #for i in range(target.size(1)): 
+        #    plt.scatter(range(0, target.size(0)), output[:, i].cpu())
+        
+    plt.xlabel('time')
+    plt.ylabel('population')
+    plt.legend()
+    plt.savefig(trainer.config['hash'] + '/' + trainer.name + '_TS.png')
+    plt.show()
+    
+    
 def mse_loss(input, target):
     return torch.mean((input - target) ** 2)
 
 def weighted_mse_loss(input, target, weight):
     return torch.mean(weight * (input - target) ** 2)
+
+
+
 
 if __name__ == '__main__':
 
@@ -89,22 +112,25 @@ if __name__ == '__main__':
     
     loss_weight = torch.Tensor([1, 0]) # vals_k, k in torch.cat() below
     for ki, k in enumerate(K):
-        k = torch.Tensor([k]).expand_as(ts)
-        log.debug('sizes: k, v: {}, {}'.format(k.size(), vals[:, ki].size()))
-        input_ = torch.cat([vals[:, ki].unsqueeze(1), k, ts], dim=-1)
-        kth_samples[input_] = vals[:, ki]
+        input_ = torch.cat([vals[:, ki].unsqueeze(1), ts], dim=-1)
+        kth_samples[k] = input_, vals[:, ki]
         
     if hpconfig['model'] == 'time-series':
         dataset = []
-        for input_, output in kth_samples.items():
+        for k, (input_, output) in kth_samples.items():
             print('ds: input_, output: {}, {}'.format(input_.size(), output.size()))
-            dataset.append(model_base.TSDataset(config_utils.config, hpconfig, input_, output))
+            dataset.append(model_base.TSDataset(config_utils.config, hpconfig,
+                                                'K={}'.format(k),
+                                                input_, output))
 
-        trainset = dataset[0] 
-        for di in dataset[1:-1]:
-            trainset = trainset + di
+        trainset = dataset[0]
+        for di in dataset[21::2]:
+            trainset += di
 
-        testset = dataset[-1]
+        testset = dataset[1]
+        for di in dataset[3::2]:
+            testset +=  di
+
         #dataset = trainset + testset
         random_sample  = random.choice(trainset)
         input_, output = random_sample
