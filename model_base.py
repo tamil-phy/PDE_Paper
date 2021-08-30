@@ -150,7 +150,7 @@ class Trainer:
 
 
     def write_metric(self, metric, path):
-        with open(self.config.metrics_path[path], 'w') as f:
+        with open(self.config['metrics_path'][path], 'w') as f:
             for rec in self.loss_records:
                 f.write('{}\t{}'.format(*rec))
 
