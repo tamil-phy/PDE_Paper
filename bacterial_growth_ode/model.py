@@ -38,8 +38,8 @@ def plot_results_XY(trainer, epoch):
     plt.show()
 
 
-def plot_results_TS(trainer, epoch):
-    input_, target, output = trainer.eval_epoch(epoch)
+def plot_results_TS(trainer, result):
+    input_, target, output = result
     print('shapes: input_, target, ouptut: {}, {}, {}'.format(input_.size(),
                                                               target.size(),
                                                               output.size()))
@@ -53,7 +53,7 @@ def plot_results_TS(trainer, epoch):
     plt.xlabel('time')
     plt.ylabel('population')
     plt.legend()
-    plt.savefig(trainer.name + '.png')
+    plt.savefig(trainer.name + '_TS.png')
     plt.show()
 
 
@@ -105,8 +105,8 @@ if __name__ == '__main__':
             trainset = trainset + di
 
         testset = dataset[-1]
-        dataset = trainset + testset
-        random_sample  = random.choice(dataset)
+        #dataset = trainset + testset
+        random_sample  = random.choice(trainset)
         input_, output = random_sample
         
         print('random sample: ', random_sample)
@@ -139,7 +139,7 @@ if __name__ == '__main__':
         torch.nn.L1Loss(), #partial(weighted_mse_loss, weight=loss_weight.cuda() if config['cuda'] else loss_weight),
         torch.optim.Adam(model.parameters()),
         
-        testset,        
+        trainset,        
         testset,
         batch_size = 100,
         
@@ -147,4 +147,4 @@ if __name__ == '__main__':
     )
     
     trainer.do_train(1000)
-    plot_results_TS(trainer, -1)
+    plot_results_TS(trainer, trainer.eval_epoch(-1))
