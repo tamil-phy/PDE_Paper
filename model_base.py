@@ -72,6 +72,8 @@ class TSDataset(Dataset):
         self.input_, self.output = sliding_windows(input_, output, hpconfig['seq_length'])
         print('shapes: input_, output: {}, {}'.format(self.input_.size(), self.output.size()))
 
+        plt.plot(self.output)
+        plt.show()
         
     def __len__(self):
         return len(self.input_)
@@ -150,7 +152,7 @@ class Trainer:
 
 
     def write_metric(self, metric, path):
-        with open(self.config.metrics_path[path], 'w') as f:
+        with open(self.config['metrics_path'][path], 'w') as f:
             for rec in self.loss_records:
                 f.write('{}\t{}'.format(*rec))
 
@@ -313,6 +315,6 @@ class TSModel(nn.Module):
         
         h_out = h_out.view(-1, self.num_layers * self.hidden_size)
         
-        out = self.fc(h_out)
+        out = self.fc(torch.relu(h_out))
         
         return out

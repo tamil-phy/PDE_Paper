@@ -106,6 +106,10 @@ if __name__ == '__main__':
 
         testset = dataset[-1]
         dataset = trainset + testset
+
+        dataset = model_base.TSDataset(config_utils.config, hpconfig,
+                                       vals[:, 0].unsqueeze(1), vals[:, 0])
+                    
         random_sample  = random.choice(dataset)
         input_, output = random_sample
         
@@ -139,8 +143,8 @@ if __name__ == '__main__':
         torch.nn.L1Loss(), #partial(weighted_mse_loss, weight=loss_weight.cuda() if config['cuda'] else loss_weight),
         torch.optim.Adam(model.parameters()),
         
-        testset,        
-        testset,
+        dataset,        
+        dataset,
         batch_size = 100,
         
         weights_path = weights_path
