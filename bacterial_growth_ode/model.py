@@ -127,22 +127,12 @@ if __name__ == '__main__':
         for di in dataset[21::2]:
             trainset += di
 
-<<<<<<< HEAD
-        testset = dataset[-1]
-        dataset = trainset + testset
-
-        dataset = model_base.TSDataset(config_utils.config, hpconfig,
-                                       vals[:, 0].unsqueeze(1), vals[:, 0])
-                    
-        random_sample  = random.choice(dataset)
-=======
         testset = dataset[1]
         for di in dataset[3::2]:
             testset +=  di
 
         #dataset = trainset + testset
         random_sample  = random.choice(trainset)
->>>>>>> fix
         input_, output = random_sample
         
         print('random sample: ', random_sample)
