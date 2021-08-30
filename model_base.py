@@ -129,12 +129,12 @@ class Trainer:
         self.testset       = testset
         
         self.trainloader = DataLoader(trainset,
-                                      shuffle=False,
-                                      batch_size = batch_size)
+                                     shuffle=self.hpconfig['trainset_shuffle'],
+                                      batch_size = self.hpconfig["batch_size"])                         
 
         self.testloader = DataLoader(testset,
-                                     shuffle=False,
-                                     batch_size = batch_size)
+                                     shuffle=self.hpconfig['testset_shuffle'],
+                                     batch_size = self.hpconfig["batch_size"])
         
         self.epochs       = epochs       
         self.every_nepoch = every_nepoch
@@ -216,10 +216,16 @@ class Trainer:
             
         return torch.stack(losses).mean().item(), torch.stack(accuracies).mean().item()
     
-    def eval_epoch(self, epoch):
+    def eval_epoch(self, epoch, testset=None):
         self.model.eval()
         outputs     = []
-        for batch in self.testloader:
+        testloader = self.testloader
+        if testset:
+            testloader = DataLoader(testset,
+                                    shuffle=self.hpconfig['testset_shuffle'],
+                                    batch_size = self.hpconfig["batch_size"])
+            
+        for batch in testloader:
             output = self.eval_step(batch)
             outputs.extend(output)
 
