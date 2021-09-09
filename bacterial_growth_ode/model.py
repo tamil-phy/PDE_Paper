@@ -39,6 +39,7 @@ def plot_results_XY(trainer, epoch):
 
 
 def plot_results_TS(trainer, result):
+    
     input_, target, output = result
     print('shapes: input_, target, ouptut: {}, {}, {}'.format(input_.size(),
                                                               target.size(),
@@ -57,7 +58,8 @@ def plot_results_TS(trainer, result):
     plt.show()
 
 
-def plot_ts_output(trainer, testsets):
+def plot_ts_output(trainer, testsets, epoch=0):
+    fig = plt.figure(figsize=(20, 15))
     for testset in testsets:
         input_, target, output = trainer.eval_epoch(-1, testset)
         print('shapes: input_, target, ouptut: {}, {}, {}'.format(input_.size(),
@@ -65,17 +67,17 @@ def plot_ts_output(trainer, testsets):
                                                                   output.size()))
     
         input_, target, output = [i.detach().cpu() for i in [input_, target, output]]
-        plt.plot(range(target.size(0)), target.cpu(), label=testset.name)
-        plt.scatter(range(0, target.size(0)), output.cpu())
+        k = float(testset.name.split('=')[-1])
+        plt.plot(range(target.size(0)), target.cpu() * k, label=testset.name)
+        plt.scatter(range(0, target.size(0)), output.cpu() * k)
         #for i in range(target.size(1)): 
         #    plt.scatter(range(0, target.size(0)), output[:, i].cpu())
         
     plt.xlabel('time')
     plt.ylabel('population')
     plt.legend()
-    plt.savefig(trainer.config['hash'] + '/' + trainer.name + '_TS.png')
-    plt.show()
-    
+    plt.savefig(trainer.config['hash'] + '/' + trainer.name + '_TS_{}.png'.format(epoch))
+    plt.cla()    
     
 def mse_loss(input, target):
     return torch.mean((input - target) ** 2)
@@ -113,7 +115,7 @@ if __name__ == '__main__':
     loss_weight = torch.Tensor([1, 0]) # vals_k, k in torch.cat() below
     for ki, k in enumerate(K):
         input_ = torch.cat([vals[:, ki].unsqueeze(1), ts], dim=-1)
-        kth_samples[k] = input_, vals[:, ki]
+        kth_samples[k] = input_, vals[:, ki]/k
         
     if hpconfig['model'] == 'time-series':
         dataset = []
@@ -123,16 +125,17 @@ if __name__ == '__main__':
                                                 'K={}'.format(k),
                                                 input_, output))
 
-        trainset = dataset[0]
-        for di in dataset[21::2]:
+        trainset = dataset[1]
+        for di in dataset[3::2]:
             trainset += di
 
-        testset = dataset[1]
-        for di in dataset[3::2]:
+        testset = dataset[0]
+        for di in dataset[2::2]:
             testset +=  di
 
         #dataset = trainset + testset
         random_sample  = random.choice(trainset)
+
         input_, output = random_sample
         
         print('random sample: ', random_sample)
@@ -171,6 +174,8 @@ if __name__ == '__main__':
         
         weights_path = weights_path
     )
-    
-    trainer.do_train(1000)
-    plot_results_TS(trainer, trainer.eval_epoch(-1))
+
+    for i in range(100):
+        trainer.do_train(1000)
+        plot_ts_output(trainer, dataset, (i + 1) * 1000)
+

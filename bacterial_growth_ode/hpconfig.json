@@ -1,10 +1,10 @@
 {
     "model" : "time-series",
-    "hidden_size" : 100,
-    "resample_ratio" : 100,
+    "hidden_size" : 50,
+    "resample_ratio" : 50,
     "num_layers" : 1,
     "merge_time_axis_values": false,
-    "seq_length" : 4,
+    "seq_length" : 5,
 
     "loss_path" : "loss.txt",
     "accuracy_path" : "accuracy.txt",

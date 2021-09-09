@@ -80,8 +80,9 @@ class TSDataset(Dataset):
         self.input_, self.output = sliding_windows(input_, output, hpconfig['seq_length'])
         print('shapes: input_, output: {}, {}'.format(self.input_.size(), self.output.size()))
 
-        plt.plot(self.output)
-        plt.show()
+        if config['verbose']:
+            plt.plot(self.output)
+            plt.show()
         
     def __len__(self):
         return len(self.input_)
@@ -165,7 +166,7 @@ class Trainer:
     def write_metric(self, metric, path):
         with open(self.config['metrics_path'][path], 'w') as f:
             for rec in self.loss_records:
-                f.write('{}\t{}'.format(*rec))
+                f.write('{}\t{}\n'.format(*rec))
 
     
     # step functions for train, test, eval
