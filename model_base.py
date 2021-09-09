@@ -73,7 +73,7 @@ class TSDataset(Dataset):
             '{} != {}'.format(len(input_), len(output))
         
         input_, output = np.array(input_), np.array(output)
-        resample_ratio = len(input_) // hpconfig['resample_ratio']
+        resample_ratio = hpconfig['resample_ratio']
         input_ = input_[::resample_ratio]
         output    = output   [::resample_ratio]
         
