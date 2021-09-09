@@ -112,7 +112,7 @@ if __name__ == '__main__':
         dlen = len(ts)
         pivot = int(0.5 * dlen)
         trainset = model_base.TSDataset(config_utils.config, hpconfig,
-                                        'train', ts, vals)
+                                        'train', ts[:pivot], vals[:pivot])
         
         testset  = model_base.TSDataset(config_utils.config, hpconfig,
                                          'test', ts[pivot:], vals[pivot:])
