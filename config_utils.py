@@ -28,6 +28,13 @@ def init_config(aconfig, hpconfig):
     for k, v in config['metrics_path'].items():
         config['metrics_path'][k] = '{}/{}'.format(config['hash'], v)
 
+    with open('{}/config.json'.format(config['hash']), 'w') as f:
+        json.dump(config, f, indent=4, ensure_ascii=False)
+        
+    with open('{}/hpconfig.json'.format(config['hash']), 'w') as f:
+        json.dump(hpconfig, f, indent=4, ensure_ascii=False)
+        
+        
 def get_directory_from_file(path):
     return os.path.basename(
         os.path.dirname(

@@ -62,7 +62,7 @@ class TSDataset(Dataset):
                 x = input_[i:(i+seq_length)]
                 y = output[i+seq_length]
                 X.append(x)
-                Y.append([y])
+                Y.append(y)
 
             return torch.Tensor(X), torch.Tensor(Y)
 
@@ -281,20 +281,22 @@ class Model(nn.Module):
     def __init__(self, config, hpconfig, input_size, output_size):
 
         super().__init__()
-        self.fc1 = nn.Linear(input_size, 64)
-        #self.fc2 = nn.Linear(64, 64)
-        #self.fc3 = nn.Linear(64, 64)
-        self.fc4 = nn.Linear(64, output_size)
+        self.config = config
+        self.hpconfig = hpconfig
+        self.fc1 = nn.Linear(input_size, hpconfig['hidden_size'])
+        self.fc = {}
+        for i in range(hpconfig['num_layers']):
+            self.fc[i] = nn.Linear(hpconfig['hidden_size'], hpconfig['hidden_size'])
+            
+        self.fc4 = nn.Linear(hpconfig['hidden_size'], output_size)
 
     def forward(self, x):
         x = self.fc1(x)
         x = torch.tanh(x)
-        
-        #x = self.fc2(x)
-        #x = torch.tanh(x)
-         
-        #x = self.fc3(x)
-        #x = torch.tanh(x)
+
+        for i, layer in self.fc:
+            x = self.fc[i](x)
+            x = torch.tanh(x)
         
         x = self.fc4(x)
        
@@ -333,6 +335,6 @@ class TSModel(nn.Module):
         
         h_out = h_out.view(-1, self.num_layers * self.hidden_size)
         
-        out = self.fc(torch.relu(h_out))
+        out = self.fc(h_out)
         
         return out

@@ -60,24 +60,68 @@ def plot_results_TS(trainer, result):
 
 def plot_ts_output(trainer, testsets, epoch=0):
     fig = plt.figure(figsize=(20, 15))
-    for testset in testsets:
-        input_, target, output = trainer.eval_epoch(-1, testset)
-        print('shapes: input_, target, ouptut: {}, {}, {}'.format(input_.size(),
-                                                                  target.size(),
-                                                                  output.size()))
+    prev_x = 0
+    trainset, testset = testsets
+
+    input_, target, output = trainer.eval_epoch(-1, trainset)
+    print('shapes: input_, target, ouptut: {}, {}, {}'.format(input_.size(),
+                                                              target.size(),
+                                                              output.size()))
     
-        input_, target, output = [i.detach().cpu() for i in [input_, target, output]]
-        plt.scatter(range(0, target.size(0)), target.cpu(), label=testset.name)
-        plt.scatter(range(0, target.size(0)), output.cpu(), label=testset.name)
-        #for i in range(target.size(1)): 
-        #    plt.scatter(range(0, target.size(0)), output[:, i].cpu())
+    input_, target, output = [i.detach().cpu() for i in [input_, target, output]]
+    prev_x -= target.size(0)
+    plt.plot(range(0, target.size(0)), target.cpu(), label=trainset.name)
+    plt.scatter(range(0, target.size(0)), output.cpu())
+
+    prev_x = target.size(0)
+    input_, target, output = trainer.eval_epoch(-1, testset)
+    print('shapes: input_, target, ouptut: {}, {}, {}'.format(input_.size(),
+                                                              target.size(),
+                                                              output.size()))
+    
+    input_, target, output = [i.detach().cpu() for i in [input_, target, output]]
+    prev_x -= target.size(0)
+    plt.plot(range(0 + prev_x, target.size(0) + prev_x), target.cpu(), label=testset.name)
+    plt.scatter(range(0 + prev_x, target.size(0) + prev_x), output.cpu())
+
         
     plt.xlabel('time')
     plt.ylabel('population')
     plt.legend()
     plt.savefig(trainer.config['hash'] + '/' + trainer.name + '_TS_{}.png'.format(epoch))
     plt.cla()    
+
+def plot_xy_output(trainer, testsets, epoch=0):
+    fig = plt.figure(figsize=(20, 15))
+    prev_x = 0
+    trainset, testset = testsets
+
+    input_, target, output = trainer.eval_epoch(-1, trainset)
+    print('shapes: input_, target, ouptut: {}, {}, {}'.format(input_.size(),
+                                                              target.size(),
+                                                              output.size()))
     
+    input_, target, output = [i.detach().cpu() for i in [input_, target, output]]
+    #plt.plot(input_.cpu(), target.cpu())
+    plt.scatter(input_.cpu(), target.cpu(), label=trainset.name)
+
+    prev_x = target.size(0)
+    input_, target, output = trainer.eval_epoch(-1, testset)
+    print('shapes: input_, target, ouptut: {}, {}, {}'.format(input_.size(),
+                                                              target.size(),
+                                                              output.size()))
+    
+    input_, target, output = [i.detach().cpu() for i in [input_, target, output]]
+    #plt.plot(input_, target)
+    plt.scatter(input_, output, label=trainset.name)
+
+        
+    plt.xlabel('time')
+    plt.ylabel('population')
+    plt.legend()
+    plt.savefig(trainer.config['hash'] + '/' + trainer.name + '_TS_{}.png'.format(epoch))
+    plt.cla()    
+
 def mse_loss(input, target):
     return torch.mean((input - target) ** 2)
 
@@ -104,15 +148,15 @@ if __name__ == '__main__':
     plt.show()
     
     ts = torch.Tensor(ts).view(-1 ,1)
-    vals = torch.Tensor(vals)#.view(-1 ,1)
+    vals = torch.Tensor(vals).view(-1 ,1)
     print('ts: {}'.format(ts.size()))
     print('vals: {}'.format(vals.size()))
     
     if hpconfig['model'] == 'time-series':
         dlen = len(ts)
-        pivot = int(0.5 * dlen)
+        pivot = int(0.7 * dlen)
         trainset = model_base.TSDataset(config_utils.config, hpconfig,
-                                        'train', ts[:pivot], vals[:pivot])
+                                        'train', ts, vals)
         
         testset  = model_base.TSDataset(config_utils.config, hpconfig,
                                          'test', ts[pivot:], vals[pivot:])
@@ -129,9 +173,12 @@ if __name__ == '__main__':
                                    input_.size()[-1],  output.size()[-1])
         
     if hpconfig['model'] == 'xy':     
-        dataset = model_base.XYDataset(config_utils.config, hpconfig, ts, vals)
+        trainset = model_base.XYDataset(config_utils.config, hpconfig, 'train', ts[0::2], vals[0::2])
+        testset = model_base.XYDataset(config_utils.config, hpconfig, 'train', ts[1::2], vals[1::2])
 
-        random_sample  = random.choice(dataset)
+        dataset = [trainset, testset]
+                
+        random_sample  = random.choice(trainset)
         print('random sample: ', random_sample)
         input_, output = random_sample
         model = model_base.Model(config_utils.config, hpconfig,
@@ -161,5 +208,5 @@ if __name__ == '__main__':
 
     for i in range(100):
         trainer.do_train(1000)
-        plot_ts_output(trainer, dataset, (i + 1) * 1000)
+        plot_xy_output(trainer, dataset, (i + 1) * 1000)
 
