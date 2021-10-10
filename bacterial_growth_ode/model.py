@@ -47,7 +47,7 @@ def plot_results_TS(trainer, result):
     
     input_, target, output = [i.detach().cpu() for i in [input_, target, output]]
     plt.plot(range(target.size(0)), target.cpu(), label='x')
-    plt.scatter(range(0, target.size(0)), output.cpu())
+    plt.scatter(range(0, target.size(0)), output.cpu(), s=0.2)
     #for i in range(target.size(1)): 
     #    plt.scatter(range(0, target.size(0)), output[:, i].cpu())
     
@@ -59,7 +59,7 @@ def plot_results_TS(trainer, result):
 
 
 def plot_ts_output(trainer, testsets, epoch=0):
-    fig = plt.figure(figsize=(20, 15))
+    fig = plt.figure(figsize=(5, 4), dpi=600)
     for testset in testsets:
         input_, target, output = trainer.eval_epoch(-1, testset)
         print('shapes: input_, target, ouptut: {}, {}, {}'.format(input_.size(),
@@ -68,8 +68,8 @@ def plot_ts_output(trainer, testsets, epoch=0):
     
         input_, target, output = [i.detach().cpu() for i in [input_, target, output]]
         k = float(testset.name.split('=')[-1])
-        plt.plot(range(target.size(0)), target.cpu() * k, label=testset.name)
-        plt.scatter(range(0, target.size(0)), output.cpu() * k)
+        plt.plot(range(target.size(0) * 2)[::2], target.cpu() * k, label=testset.name + ' target')
+        plt.scatter(range(0, target.size(0) * 2)[::2], output.cpu() * k, s=5,  label=testset.name + ' predicted')
         #for i in range(target.size(1)): 
         #    plt.scatter(range(0, target.size(0)), output[:, i].cpu())
         
@@ -93,11 +93,12 @@ if __name__ == '__main__':
     config = json.load(open('../config.json'))
     hpconfig = json.load(open('hpconfig.json'))
     config['hpconfig_name'] = 'hpconfig'
-    pprint(hpconfig)
-    pprint(config)
     config_utils.init_config(config, hpconfig)
     assert config_utils.config != None
+    pprint(hpconfig)
+    pprint(config)
 
+    
     dataset_path = config_utils.get_dataset_path_from_file(__file__)
     weights_path = config_utils.get_weights_path_from_file(__file__)
     model_name = os.path.splitext(os.path.basename(weights_path))[0]
@@ -105,19 +106,22 @@ if __name__ == '__main__':
     ts, vals, K = pickle.load(open(dataset_path, 'rb'))
     plt.plot(ts, vals)
     plt.show()
-    
+
+    K = K[-2:]
     ts = torch.Tensor(ts)
-    vals = torch.Tensor(vals)
+    vals = torch.Tensor(vals[:, -2:])
     print('ts: {}'.format(ts.size()))
     print('vals: {}'.format(vals.size()))
     kth_samples = {}
     
-    loss_weight = torch.Tensor([1, 0]) # vals_k, k in torch.cat() below
-    for ki, k in enumerate(K):
-        input_ = torch.cat([vals[:, ki].unsqueeze(1), ts], dim=-1)
-        kth_samples[k] = input_, vals[:, ki]/k
         
     if hpconfig['model'] == 'time-series':
+        
+        loss_weight = torch.Tensor([1, 0]) # vals_k, k in torch.cat() below
+        for ki, k in enumerate(K):
+            input_ = torch.cat([vals[:, ki].unsqueeze(1), ts], dim=-1)
+            kth_samples[k] = input_, vals[:, ki]/k
+        
         dataset = []
         for k, (input_, output) in kth_samples.items():
             print('ds: input_, output: {}, {}'.format(input_.size(), output.size()))
@@ -125,6 +129,8 @@ if __name__ == '__main__':
                                                 'K={}'.format(k),
                                                 input_, output))
 
+            
+        
         trainset = dataset[1]
         for di in dataset[3::2]:
             trainset += di
@@ -144,8 +150,13 @@ if __name__ == '__main__':
         model = model_base.TSModel(config_utils.config, hpconfig,
                                    input_.size()[-1],  output.size()[-1])
         
-    if hpconfig['model'] == 'xy':     
-        dataset = model_base.XYDataset(config_utils.config, hpconfig, ts, vals)
+    if hpconfig['model'] == 'xy':
+
+        for ki, k in enumerate(K):
+            input_ = torch.cat([vals[:, ki].unsqueeze(1), ts], dim=-1)
+            kth_samples[k] = input_, vals[:, ki]/k
+        
+        dataset = model_base.XYDataset(config_utils.config, hpconfig, 'train', ts, vals)
 
         random_sample  = random.choice(dataset)
         print('random sample: ', random_sample)
@@ -177,5 +188,5 @@ if __name__ == '__main__':
 
     for i in range(100):
         trainer.do_train(1000)
-        plot_ts_output(trainer, dataset, (i + 1) * 1000)
+        plot_ts_output(trainer, [trainset], (i + 1) * 1000)
 
